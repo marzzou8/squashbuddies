@@ -17,6 +17,8 @@ def send_telegram_message(message):
     payload = {"chat_id": CHAT_ID, "text": message}
     requests.post(url, data=payload)
 
+st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
+
 payment_number = "97333133"
 excel_file = "SB.xlsx"
 
@@ -221,6 +223,7 @@ st.success("✅ Court expense saved to Excel!")
 send_telegram_message(f"Court booked on {formatted_date}, Expense SGD {expense_amount}")
 st.success(f"❌ Booking removed for {remove_player}")
 send_telegram_message(f"Booking removed: {remove_player}")
+
 
 
 
