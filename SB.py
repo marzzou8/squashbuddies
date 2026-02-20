@@ -102,7 +102,7 @@ elif option == "Mark Payment":
             records.loc[selected_index, ["Paid","Collection","Balance"]] = [True, 4, 4]
             records.to_excel(excel_file, index=False)
             st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
-            send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
+            send_telegram_message(build_update_message)
 
     else:
         st.info("No unpaid players found.")
@@ -227,6 +227,7 @@ st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
 summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
+
 
 
 
