@@ -209,11 +209,20 @@ if player_name and st.button("Save Attendance"):
 
 st.success("✅ Attendance saved!")
 send_telegram_message(f"New attendance added: {player_name} on {play_date.strftime('%d %b %y')}")
-st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
-send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
+if st.button("Mark Payment"):
+    records.loc[selected_index, "Paid"] = True
+    records.to_excel(excel_file, index=False)
+
+    # Fix date formatting
+    date_value = pd.to_datetime(records.loc[selected_index, 'Date'])
+    formatted_date = date_value.strftime('%d %b %Y')
+
+    st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {formatted_date}")
+    send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {formatted_date}")
 st.success("✅ Court expense saved to Excel!")
 send_telegram_message(f"Court {court_number} booked on {booking_date} for {time_slot}, Expense SGD {expense_amount}")
 st.success(f"❌ Booking removed for {remove_player}")
 send_telegram_message(f"Booking removed: {remove_player}")
+
 
 
