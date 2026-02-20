@@ -63,8 +63,6 @@ days_until_sunday = (6 - today.weekday()) % 7
 first_sunday = today + datetime.timedelta(days=days_until_sunday)
 next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
 
-summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-
 # --- Player Attendance ---
 if option == "Player":
     player_name = st.text_input("Enter your name")
@@ -89,6 +87,8 @@ if option == "Player":
         records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
         records.to_excel(excel_file, index=False)
         st.success("✅ Attendance saved!")
+
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
 
 # --- MARK PAYMENT ---
 elif option == "Mark Payment":
@@ -226,5 +226,6 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
 
 
