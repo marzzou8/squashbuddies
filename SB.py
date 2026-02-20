@@ -57,13 +57,13 @@ else:
 
 option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
 
-summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-
 # --- Generate next 4 Sundays ---
 today = datetime.date.today()
 days_until_sunday = (6 - today.weekday()) % 7
 first_sunday = today + datetime.timedelta(days=days_until_sunday)
 next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
+
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
 
 # --- Player Attendance ---
 if option == "Player":
@@ -226,4 +226,5 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
 
