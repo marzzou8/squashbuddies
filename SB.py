@@ -194,36 +194,30 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
-TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
-CHAT_ID = st.secrets["CHAT_ID"]
+# Attendance
+if player_name and st.button("Save Attendance", key="btn_attendance"):
+    ...
+    formatted_date = play_date.strftime("%d %b %Y")
+    send_telegram_message(f"New attendance added: {player_name} on {formatted_date}")
 
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message}
-    requests.post(url, data=payload)
-if player_name and st.button("Save Attendance"):
-    new_record = {...}
-    records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-    records.to_excel(excel_file, index=False)
-    st.success("✅ Attendance saved!")
-    send_telegram_message(f"New attendance added: {player_name} on {play_date.strftime('%d %b %y')}")
-
-st.success("✅ Attendance saved!")
-send_telegram_message(f"New attendance added: {player_name} on {play_date.strftime('%d %b %y')}")
-if st.button("Mark Payment"):
-    records.loc[selected_index, "Paid"] = True
-    records.to_excel(excel_file, index=False)
-
-    # Fix date formatting
-    date_value = pd.to_datetime(records.loc[selected_index, 'Date'])
-    formatted_date = date_value.strftime('%d %b %Y')
-
-    st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {formatted_date}")
+# Payment
+if st.button("Mark Payment", key="btn_payment"):
+    ...
+    date_value = pd.to_datetime(records.loc[selected_index, "Date"])
+    formatted_date = date_value.strftime("%d %b %Y")
     send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {formatted_date}")
-    st.success("✅ Court expense saved to Excel!")
-    send_telegram_message(f"Court booked on {formatted_date}, Expense SGD {total_expense}")
-    st.success(f"❌ Booking removed for {remove_player}")
+
+# Expense
+if st.button("Save Court Expense", key="btn_expense"):
+    ...
+    formatted_date = booking_date.strftime("%d %b %Y")
+    send_telegram_message(f"Court {court_number} booked on {formatted_date} for {time_slot}, Expense SGD {expense_amount}")
+
+# Remove Booking
+if st.button("Remove Booking", key="btn_remove"):
+    ...
     send_telegram_message(f"Booking removed: {remove_player}")
+
 
 
 
