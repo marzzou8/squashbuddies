@@ -8,6 +8,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 import os
+import requests
 
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
@@ -20,7 +21,7 @@ if os.path.exists(excel_file):
 else:
     records = pd.DataFrame(columns=["Date", "Player Name", "Paid", "Court", "Time Slot", "Collection", "Expense", "Balance", "Description"])
 
-option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense", "Remove Booking"])
+option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
 
 # --- Generate next 4 Sundays ---
 today = datetime.date.today()
@@ -209,6 +210,7 @@ st.success("✅ Court expense saved to Excel!")
 send_telegram_message(f"Court {court_number} booked on {booking_date} for {time_slot}, Expense SGD {expense_amount}")
 st.success(f"❌ Booking removed for {remove_player}")
 send_telegram_message(f"Booking removed: {remove_player}")
+
 
 
 
