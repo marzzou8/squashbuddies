@@ -22,14 +22,22 @@ else:
 
 option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense", "Remove Booking"])
 
-# --- PLAYER ATTENDANCE ---
+# --- Generate next 4 Sundays ---
+today = datetime.date.today()
+days_until_sunday = (6 - today.weekday()) % 7
+first_sunday = today + datetime.timedelta(days=days_until_sunday)
+next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
+
+# --- Player Attendance ---
 if option == "Player":
     player_name = st.text_input("Enter your name")
-    play_date = st.date_input("Select Sunday date", value=datetime.date.today())
+    play_date = st.selectbox(
+        "Select Sunday date",
+        next_sundays,
+        format_func=lambda d: d.strftime("%d %b %y")
+    )
 
-    if play_date.weekday() != 6:
-        st.error("⚠️ Please select a Sunday date.")
-    elif player_name and st.button("Save Attendance"):
+    if player_name and st.button("Save Attendance"):
         new_record = {
             "Date": play_date,
             "Player Name": player_name,
@@ -177,14 +185,30 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
+# Load secrets from .streamlit/secrets.toml
+TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
+CHAT_ID = st.secrets["CHAT_ID"]
 
-# In[ ]:
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message}
+    requests.post(url, data=payload)
 
+if player_name and st.button("Save Attendance"):
+    new_record = {...}
+    records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
+    records.to_excel(excel_file, index=False)
+    st.success("✅ Attendance saved!")
+    send_telegram_message(f"New attendance added: {player_name} on {play_date.strftime('%d %b %y')}")
 
-
-
-
-# In[ ]:
+st.success("✅ Attendance saved!")
+send_telegram_message(f"New attendance added: {player_name} on {play_date.strftime('%d %b %y')}")
+st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
+send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
+st.success("✅ Court expense saved to Excel!")
+send_telegram_message(f"Court {court_number} booked on {booking_date} for {time_slot}, Expense SGD {expense_amount}")
+st.success(f"❌ Booking removed for {remove_player}")
+send_telegram_message(f"Booking removed: {remove_player}")
 
 
 
