@@ -44,6 +44,8 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Join everything into one string
     return "\n".join(message_lines)
 
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
+
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
 payment_number = "97333133"
@@ -101,6 +103,7 @@ elif option == "Mark Payment":
             records.loc[selected_index, ["Paid","Collection","Balance"]] = [True, 4, 4]
             records.to_excel(excel_file, index=False)
             st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
+            send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
 
     else:
         st.info("No unpaid players found.")
@@ -140,6 +143,7 @@ elif option == "Expense":
                 records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
                 records.to_excel(excel_file, index=False)
                 st.success("✅ Court expense saved to Excel!")
+                send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
     
     else:
         booking_date = st.date_input("Expense date", value=datetime.date.today())
@@ -161,6 +165,7 @@ elif option == "Expense":
             records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
             records.to_excel(excel_file, index=False)
             st.success("✅ Other expense saved to Excel!")
+            send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
 
 # --- REMOVE BOOKING ---
 elif option == "Remove Booking":
@@ -172,6 +177,7 @@ elif option == "Remove Booking":
             records = records.drop(records[records["Player Name"] == remove_player].index)
             records.to_excel(excel_file, index=False)
             st.success(f"❌ Booking removed for {remove_player}")
+            send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
     else:
         st.info("No bookings found.")
 # --- Dashboard ---
@@ -220,7 +226,3 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
-
-summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
-
