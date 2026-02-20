@@ -9,7 +9,7 @@ import datetime
 import pandas as pd
 import os
 
-st.title("🏸 Squash Group Attendance, Collection & Expenses")
+st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
 payment_number = "97333133"
 excel_file = "SB.xlsx"
@@ -185,6 +185,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 
 
 # In[ ]:
+
 
 
 
