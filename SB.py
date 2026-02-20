@@ -87,6 +87,7 @@ if option == "Player":
         records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
         records.to_excel(excel_file, index=False)
         st.success("✅ Attendance saved!")
+        send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
 
 # --- MARK PAYMENT ---
 elif option == "Mark Payment":
@@ -226,5 +227,6 @@ st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
 summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
+
 
 
