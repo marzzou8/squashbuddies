@@ -61,6 +61,7 @@ if option == "Player":
         records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
         records.to_excel(excel_file, index=False)
         st.success("✅ Attendance saved!")
+        formatted_date = play_date.strftime("%d %b %Y")
         send_telegram_message(f"New attendance added: {player_name} on {formatted_date}")
 
 # --- MARK PAYMENT ---
@@ -202,3 +203,4 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
