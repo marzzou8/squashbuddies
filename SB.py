@@ -88,8 +88,6 @@ if option == "Player":
         records.to_excel(excel_file, index=False)
         st.success("✅ Attendance saved!")
 
-summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-
 # --- MARK PAYMENT ---
 elif option == "Mark Payment":
     unpaid_records = records[(records["Paid"] == False)]
@@ -227,5 +225,6 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
 
 
