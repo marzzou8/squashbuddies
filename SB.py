@@ -220,10 +220,11 @@ if st.button("Mark Payment"):
 
     st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {formatted_date}")
     send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {formatted_date}")
-st.success("✅ Court expense saved to Excel!")
-send_telegram_message(f"Court booked on {formatted_date}, Expense SGD {total_expense}")
-st.success(f"❌ Booking removed for {remove_player}")
-send_telegram_message(f"Booking removed: {remove_player}")
+    st.success("✅ Court expense saved to Excel!")
+    send_telegram_message(f"Court booked on {formatted_date}, Expense SGD {total_expense}")
+    st.success(f"❌ Booking removed for {remove_player}")
+    send_telegram_message(f"Booking removed: {remove_player}")
+
 
 
 
