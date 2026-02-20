@@ -18,6 +18,32 @@ def send_telegram_message(message):
     payload = {"chat_id": CHAT_ID, "text": message}
     requests.post(url, data=payload)
 
+def build_update_message(next_sunday, court_bookings, attendance_count, player_names):
+    # Format the date
+    message_lines = []
+    message_lines.append(f"**Date:** {next_sunday.strftime('%d %b %y')}")
+
+    # Court bookings
+    if not court_bookings.empty:
+        for _, row in court_bookings.iterrows():
+            message_lines.append(f"🏸 **Court:** {row['Court']} | **Time:** {row['Time Slot']}")
+    else:
+        message_lines.append("No court bookings yet.")
+
+    # Attendance
+    message_lines.append(f"👥 **Attendance:** {attendance_count} players")
+
+    # Player names
+    if player_names:
+        message_lines.append("**Players signed up:**")
+        for name in player_names:
+            message_lines.append(f"- {name}")
+    else:
+        message_lines.append("No players signed up yet.")
+
+    # Join everything into one string
+    return "\n".join(message_lines)
+
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
 payment_number = "97333133"
@@ -61,8 +87,6 @@ if option == "Player":
         records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
         records.to_excel(excel_file, index=False)
         st.success("✅ Attendance saved!")
-        formatted_date = play_date.strftime("%d %b %Y")
-        send_telegram_message(f"New attendance added: {player_name} on {formatted_date}")
 
 # --- MARK PAYMENT ---
 elif option == "Mark Payment":
@@ -77,9 +101,7 @@ elif option == "Mark Payment":
             records.loc[selected_index, ["Paid","Collection","Balance"]] = [True, 4, 4]
             records.to_excel(excel_file, index=False)
             st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
-            date_value = pd.to_datetime(records.loc[selected_index, "Date"])
-            formatted_date = date_value.strftime("%d %b %Y")
-            send_telegram_message(f"Payment marked: {records.loc[selected_index, 'Player Name']} on {formatted_date}")
+
     else:
         st.info("No unpaid players found.")
 
@@ -118,8 +140,6 @@ elif option == "Expense":
                 records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
                 records.to_excel(excel_file, index=False)
                 st.success("✅ Court expense saved to Excel!")
-                formatted_date = booking_date.strftime("%d %b %Y")
-                send_telegram_message(f"Court {court_number} booked on {formatted_date} for {time_slot}, Expense SGD {expense_amount}")
     
     else:
         booking_date = st.date_input("Expense date", value=datetime.date.today())
@@ -141,8 +161,6 @@ elif option == "Expense":
             records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
             records.to_excel(excel_file, index=False)
             st.success("✅ Other expense saved to Excel!")
-            formatted_date = booking_date.strftime("%d %b %Y")
-            send_telegram_message(f"Court {court_number} booked on {formatted_date} for {time_slot}, Expense SGD {expense_amount}")
 
 # --- REMOVE BOOKING ---
 elif option == "Remove Booking":
@@ -154,7 +172,6 @@ elif option == "Remove Booking":
             records = records.drop(records[records["Player Name"] == remove_player].index)
             records.to_excel(excel_file, index=False)
             st.success(f"❌ Booking removed for {remove_player}")
-            send_telegram_message(f"Booking removed: {remove_player}")
     else:
         st.info("No bookings found.")
 # --- Dashboard ---
@@ -204,3 +221,6 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
+st.write(summary_message)
+send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
