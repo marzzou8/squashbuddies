@@ -222,5 +222,5 @@ st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
 summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-st.write(summary_message)
 send_telegram_message(build_update_message(next_sunday, court_bookings, attendance_count, player_names))
+
