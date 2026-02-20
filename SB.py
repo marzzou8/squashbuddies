@@ -44,8 +44,6 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Join everything into one string
     return "\n".join(message_lines)
 
-summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
 payment_number = "97333133"
@@ -58,6 +56,8 @@ else:
     records = pd.DataFrame(columns=["Date", "Player Name", "Paid", "Court", "Time Slot", "Collection", "Expense", "Balance", "Description"])
 
 option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
+
+summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
 
 # --- Generate next 4 Sundays ---
 today = datetime.date.today()
@@ -226,3 +226,4 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
