@@ -86,7 +86,7 @@ if option == "Player":
         }
         records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
         records.to_excel(excel_file, index=False)
-        st.success("✅ Attendance saved!")
+        st.success("✅ See you at court!")
           # Build summary and send Telegram
         next_sunday = first_sunday
         court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
@@ -254,3 +254,4 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
