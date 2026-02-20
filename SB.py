@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[24]:
+# In[26]:
 
 
 import streamlit as st
@@ -9,7 +9,7 @@ import datetime
 import pandas as pd
 import os
 
-st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
+st.title("🏸 Squash Group Attendance, Collection & Expenses")
 
 payment_number = "97333133"
 excel_file = "SB.xlsx"
@@ -20,7 +20,7 @@ if os.path.exists(excel_file):
 else:
     records = pd.DataFrame(columns=["Date", "Player Name", "Paid", "Court", "Time Slot", "Collection", "Expense", "Balance", "Description"])
 
-option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense"])
+option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense", "Remove Booking"])
 
 # --- PLAYER ATTENDANCE ---
 if option == "Player":
@@ -33,7 +33,7 @@ if option == "Player":
         new_record = {
             "Date": play_date,
             "Player Name": player_name,
-            "Paid": False,   # initially unpaid
+            "Paid": False,
             "Court": None,
             "Time Slot": "2–5pm",
             "Collection": 0,
@@ -47,23 +47,20 @@ if option == "Player":
 
 # --- MARK PAYMENT ---
 elif option == "Mark Payment":
-    # Show all unpaid players across all dates
     unpaid_records = records[(records["Paid"] == False)]
-    
     if not unpaid_records.empty:
-        # Let organizer pick player + date
         selected_index = st.selectbox(
             "Select player to mark as paid",
             unpaid_records.index,
             format_func=lambda i: f"{unpaid_records.loc[i, 'Player Name']} (Date: {unpaid_records.loc[i, 'Date'].date()})"
         )
-        
         if st.button("Confirm Payment"):
             records.loc[selected_index, ["Paid","Collection","Balance"]] = [True, 4, 4]
             records.to_excel(excel_file, index=False)
             st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
     else:
         st.info("No unpaid players found.")
+
 # --- EXPENSE ---
 elif option == "Expense":
     expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
@@ -74,16 +71,13 @@ elif option == "Expense":
             st.error("⚠️ Court bookings should be on Sunday.")
         else:
             court_number = st.selectbox("Court number", [1, 2, 3, 4, 5])
-            time_slot = st.selectbox(
-                "Time slot",
-                ["2–3pm", "2–4pm", "3–4pm", "4–5pm"]   # ✅ includes 2–4pm
-            )
-
-            # ✅ Dynamic expense based on duration
+            time_slot = st.selectbox("Time slot", ["2–3pm", "2–4pm", "3–4pm", "4–5pm"])
+            
+            # Dynamic expense based on duration
             if time_slot == "2–4pm":
-                expense_amount = 12   # 2 hours → 6 x 2
+                expense_amount = 12
             else:
-                expense_amount = 6    # default 1 hour
+                expense_amount = 6
 
             st.write(f"Court {court_number} booked on {booking_date} for {time_slot}. Expense: SGD {expense_amount}")
             
@@ -102,6 +96,40 @@ elif option == "Expense":
                 records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
                 records.to_excel(excel_file, index=False)
                 st.success("✅ Court expense saved to Excel!")
+    
+    else:
+        booking_date = st.date_input("Expense date", value=datetime.date.today())
+        expense_amount = st.number_input("Enter expense amount (SGD)", min_value=0)
+        description = st.text_input("Description of expense")
+        
+        if st.button("Save Other Expense"):
+            new_record = {
+                "Date": booking_date,
+                "Player Name": None,
+                "Paid": None,
+                "Court": None,
+                "Time Slot": None,
+                "Collection": 0,
+                "Expense": expense_amount,
+                "Balance": -expense_amount,
+                "Description": description
+            }
+            records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
+            records.to_excel(excel_file, index=False)
+            st.success("✅ Other expense saved to Excel!")
+
+# --- REMOVE BOOKING ---
+elif option == "Remove Booking":
+    st.subheader("Remove Booking")
+    booked_players = records[records["Player Name"].notna()]["Player Name"].tolist()
+    if booked_players:
+        remove_player = st.selectbox("Select player to remove", booked_players)
+        if st.button("Confirm Remove"):
+            records = records.drop(records[records["Player Name"] == remove_player].index)
+            records.to_excel(excel_file, index=False)
+            st.success(f"❌ Booking removed for {remove_player}")
+    else:
+        st.info("No bookings found.")
 # --- Dashboard ---
 st.subheader("📊 Records Overview")
 records["Date"] = pd.to_datetime(records["Date"], errors="coerce")
