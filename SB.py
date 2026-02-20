@@ -1,43 +1,160 @@
 {
-"cells":[
-0:{
-"cell_type":"code"
-"execution_count":14
-"id":"2f3e1f86-d17e-420e-bdea-07d2559e76ba"
-"metadata":{}
-"outputs":[]
-"source":
-[0 - 100]
-[100 - 118]
-}
-1:{
-"cell_type":"code"
-"execution_count":NULL
-"id":"93d912a6-257f-4b2f-b66e-32a6f8aecddd"
-"metadata":{}
-"outputs":[]
-"source":[]
-}
-]
-"metadata":{
-"kernelspec":{
-"display_name":"Python [conda env:base] *"
-"language":"python"
-"name":"conda-base-py"
-}
-"language_info":{
-"codemirror_mode":{
-"name":"ipython"
-"version":3
-}
-"file_extension":".py"
-"mimetype":"text/x-python"
-"name":"python"
-"nbconvert_exporter":"python"
-"pygments_lexer":"ipython3"
-"version":"3.12.7"
-}
-}
-"nbformat":4
-"nbformat_minor":5
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": 14,
+      "id": "2f3e1f86-d17e-420e-bdea-07d2559e76ba",
+      "metadata": {},
+      "outputs": [],
+      "source": [
+        "import streamlit as st\n",
+        "import datetime\n",
+        "import pandas as pd\n",
+        "import os\n",
+        "\n",
+        "st.title(\"🏸 Squash Group Attendance, Collection & Expenses\")\n",
+        "\n",
+        "payment_number = \"97333133\"\n",
+        "excel_file = \"sb.xlsx\"\n",
+        "\n",
+        "# Load existing records if file exists\n",
+        "if os.path.exists(excel_file):\n",
+        "    records = pd.read_excel(excel_file)\n",
+        "else:\n",
+        "    records = pd.DataFrame(columns=[\"Date\", \"Player Name\", \"Court\", \"Time Slot\", \"Collection\", \"Expense\", \"Balance\", \"Description\"])\n",
+        "\n",
+        "option = st.radio(\"Choose an option:\", [\"Player\", \"Collection\", \"Expense\"])\n",
+        "\n",
+        "# --- PLAYER ---\n",
+        "if option == \"Player\":\n",
+        "    player_name = st.text_input(\"Enter your name\")\n",
+        "    play_date = st.date_input(\"Select Sunday date\", value=datetime.date.today())\n",
+        "    \n",
+        "    if player_name and st.button(\"Save Player Record\"):\n",
+        "        new_record = {\n",
+        "            \"Date\": play_date,\n",
+        "            \"Player Name\": player_name,\n",
+        "            \"Court\": None,\n",
+        "            \"Time Slot\": \"2–5pm\",\n",
+        "            \"Collection\": 4,\n",
+        "            \"Expense\": 0,\n",
+        "            \"Balance\": 4,\n",
+        "            \"Description\": \"Player booking\"\n",
+        "        }\n",
+        "        records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)\n",
+        "        records.to_excel(excel_file, index=False)\n",
+        "        st.success(\"✅ Player record saved to Excel!\")\n",
+        "\n",
+        "# --- COLLECTION ---\n",
+        "elif option == \"Collection\":\n",
+        "    num_players = st.number_input(\"Number of players\", min_value=1, step=1)\n",
+        "    total_collection = num_players * 4\n",
+        "    st.write(f\"Total collected: SGD {total_collection}\")\n",
+        "    st.write(f\"Each player pays SGD 4 via PayNow/PayLah to {payment_number}\")\n",
+        "    \n",
+        "    if st.button(\"Save Collection Record\"):\n",
+        "        new_record = {\n",
+        "            \"Date\": datetime.date.today(),\n",
+        "            \"Player Name\": None,\n",
+        "            \"Court\": None,\n",
+        "            \"Time Slot\": None,\n",
+        "            \"Collection\": total_collection,\n",
+        "            \"Expense\": 0,\n",
+        "            \"Balance\": total_collection,\n",
+        "            \"Description\": \"Collection\"\n",
+        "        }\n",
+        "        records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)\n",
+        "        records.to_excel(excel_file, index=False)\n",
+        "        st.success(\"✅ Collection record saved to Excel!\")\n",
+        "\n",
+        "# --- EXPENSE ---\n",
+        "elif option == \"Expense\":\n",
+        "    expense_type = st.radio(\"Expense type:\", [\"Court Booking\", \"Others\"])\n",
+        "    \n",
+        "    if expense_type == \"Court Booking\":\n",
+        "        booking_date = st.date_input(\"Court booking date\", value=datetime.date.today())\n",
+        "        court_number = st.selectbox(\"Court number\", [1, 2, 3, 4, 5])\n",
+        "        time_slot = st.selectbox(\"Time slot\", [\"2–3pm\", \"3–4pm\", \"4–5pm\"])\n",
+        "        expense_amount = 6\n",
+        "        st.write(f\"Court {court_number} booked on {booking_date} for {time_slot}. Expense: SGD {expense_amount}\")\n",
+        "        \n",
+        "        if st.button(\"Save Court Expense\"):\n",
+        "            new_record = {\n",
+        "                \"Date\": booking_date,\n",
+        "                \"Player Name\": None,\n",
+        "                \"Court\": court_number,\n",
+        "                \"Time Slot\": time_slot,\n",
+        "                \"Collection\": 0,\n",
+        "                \"Expense\": expense_amount,\n",
+        "                \"Balance\": -expense_amount,\n",
+        "                \"Description\": \"Court booking\"\n",
+        "            }\n",
+        "            records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)\n",
+        "            records.to_excel(excel_file, index=False)\n",
+        "            st.success(\"✅ Court expense saved to Excel!\")\n",
+        "    \n",
+        "    else:\n",
+        "        booking_date = st.date_input(\"Expense date\", value=datetime.date.today())\n",
+        "        expense_amount = st.number_input(\"Enter expense amount (SGD)\", min_value=0)\n",
+        "        description = st.text_input(\"Description of expense\")\n",
+        "        \n",
+        "        if st.button(\"Save Other Expense\"):\n",
+        "            new_record = {\n",
+        "                \"Date\": booking_date,\n",
+        "                \"Player Name\": None,\n",
+        "                \"Court\": None,\n",
+        "                \"Time Slot\": None,\n",
+        "                \"Collection\": 0,\n",
+        "                \"Expense\": expense_amount,\n",
+        "                \"Balance\": -expense_amount,\n",
+        "                \"Description\": description\n",
+        "            }\n",
+        "            records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)\n",
+        "            records.to_excel(excel_file, index=False)\n",
+        "            st.success(\"✅ Other expense saved to Excel!\")\n",
+        "\n",
+        "# --- Dashboard ---\n",
+        "st.subheader(\"📊 Records Overview\")\n",
+        "st.dataframe(records)\n",
+        "\n",
+        "# Show total balance\n",
+        "total_collection = records[\"Collection\"].sum()\n",
+        "total_expense = records[\"Expense\"].sum()\n",
+        "balance = total_collection - total_expense\n",
+        "\n",
+        "st.write(f\"Total Collection: SGD {total_collection}\")\n",
+        "st.write(f\"Total Expense: SGD {total_expense}\")\n",
+        "st.write(f\"💰 Current Balance: SGD {balance}\")"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "id": "93d912a6-257f-4b2f-b66e-32a6f8aecddd",
+      "metadata": {},
+      "outputs": [],
+      "source": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "display_name": "Python [conda env:base] *",
+      "language": "python",
+      "name": "conda-base-py"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.12.7"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
 }
