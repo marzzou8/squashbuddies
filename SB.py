@@ -16,7 +16,7 @@ scope = ["https://spreadsheets.google.com/feeds",
          "https://www.googleapis.com/auth/drive"]
 
 creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets[gcp_service_account], scope
+    st.secrets["gcp_service_account"], scope
 )
 client = gspread.authorize(creds)
 
@@ -329,6 +329,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
