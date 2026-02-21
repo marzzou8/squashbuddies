@@ -235,14 +235,14 @@ with c1:
     if st.button("👤 Player"):
         st.session_state.page = "player"
 with c2:
-    if st.button("💰 Mark Payment"):
-        st.session_state.page = "payment"
-with c3:
-    if st.button("📉 Expense"):
-        st.session_state.page = "expense"
-with c4:
     if st.button("❌ Remove Booking"):
         st.session_state.page = "remove"
+with c3:
+    if st.button("💰 Mark Payment"):
+        st.session_state.page = "payment"
+with c4:
+    if st.button("📉 Expense"):
+        st.session_state.page = "expense"
 with c5:
     if st.button("🔄 Refresh"):
         # Clear cache and rerun so dashboard reflects manual Google Sheet edits
@@ -511,6 +511,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
