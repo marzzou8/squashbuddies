@@ -427,6 +427,9 @@ st.divider()
 st.subheader("📊 Dashboard")
 
 # ✅ ALWAYS reload fresh data here
+if st.button("🔄 Refresh from Google Sheets"):
+    bust_cache()
+    st.rerun()
 df = load_records()
 
 dashboard_date = st.selectbox(
@@ -464,6 +467,7 @@ balance = total_collection - total_expense
 st.write(f"💰 Collection: SGD {total_collection}")
 st.write(f"📉 Expense: SGD {total_expense}")
 st.write(f"✅ Balance: SGD {balance}")
+
 
 
 
