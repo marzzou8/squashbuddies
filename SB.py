@@ -341,65 +341,62 @@ elif st.session_state.page == "payment":
             "Select players who have paid",
             unpaid["label"].tolist()
         )
-       if st.button("✅ Confirm Payment"):
-            if not selected:
-                st.warning("Please select at least one player.")
-            else:
-                marked = unpaid[unpaid["label"].isin(selected)]
+    if st.button("✅ Confirm Payment"):
+        if not selected:
+           st.warning("Please select at least one player.")
+        else:  
+            marked = unpaid[unpaid["label"].isin(selected)]
+            # Next Sunday booking date (e.g., 22 Feb -> 1 Mar)
+            next_week_date = next_sunday_of(pay_date)
 
-                # Next Sunday booking date (e.g., 22 Feb -> 1 Mar)
-                next_week_date = next_sunday_of(pay_date)
+            # Reload latest to check duplicates before inserting
+            latest_df = load_records()
 
-                # Reload latest to check duplicates before inserting
-                latest_df = load_records()
+            auto_added_names = []
 
-                auto_added_names = []
+            for _, r in marked.iterrows():
+                player = r["Player Name"].strip()
+                rownum = int(r["_row"])
+                # 1) Mark payment for the selected Sunday entry
+                    update_row_cells(rownum, {
+                    "Paid": True,
+                    "Collection": DEFAULT_FEE,
+                    "Balance": DEFAULT_FEE
+                    })
 
-                for _, r in marked.iterrows():
-                    player = r["Player Name"].strip()
-                    rownum = int(r["_row"])
-
-                    # 1) Mark payment for the selected Sunday entry
-                        update_row_cells(rownum, {
-                        "Paid": True,
-                        "Collection": DEFAULT_FEE,
-                        "Balance": DEFAULT_FEE
-                        })
-
-                    # 2) Auto-book next Sunday IF not already booked
-                        already_booked = not latest_df[
-                        (latest_df["Description"].str.lower() == "attendance") &
-                        (latest_df["Date"] == next_week_date) &
-                        (latest_df["Player Name"].str.lower() == player.lower())
+                # 2) Auto-book next Sunday IF not already booked
+                    already_booked = not latest_df[
+                    (latest_df["Description"].str.lower() == "attendance") &
+                    (latest_df["Date"] == next_week_date) &
+                    (latest_df["Player Name"].str.lower() == player.lower())
                     ].empty
 
-                    if not already_booked:
-                        append_record({
-                            "Date": next_week_date,
-                            "Player Name": player,
-                            "Paid": False,
-                            "Court": "",
-                            "Time Slot": DEFAULT_TIME_SLOT,
-                            "Collection": 0,
-                            "Expense": 0,
-                            "Description": "Attendance",
+                if not already_booked:
+                    append_record({
+                        "Date": next_week_date,
+                        "Player Name": player,
+                        "Paid": False,
+                        "Court": "",
+                        "Time Slot": DEFAULT_TIME_SLOT,
+                        "Collection": 0,
+                        "Expense": 0,
+                        "Description": "Attendance",
                          })
                         auto_added_names.append(player)
+                bust_cache()
 
-            bust_cache()
+                if auto_added_names:
+                    st.success(
+                        f"✅ Payment updated. Auto‑booked next Sunday ({next_week_date.strftime('%d %b %y')}): "
+                        + ", ".join(auto_added_names)
+                    )
+                else:
+                    st.success("✅ Payment updated. (No new auto‑booking needed — already booked.)")
 
-            if auto_added_names:
-                st.success(
-                    f"✅ Payment updated. Auto‑booked next Sunday ({next_week_date.strftime('%d %b %y')}): "
-                    + ", ".join(auto_added_names)
-                )
-            else:
-                st.success("✅ Payment updated. (No new auto‑booking needed — already booked.)")
+                    # Send Telegram for next Sunday (so group sees the new booking list)
+                    send_dashboard_telegram(next_week_date)
 
-                # Send Telegram for next Sunday (so group sees the new booking list)
-                send_dashboard_telegram(next_week_date)
-
-                st.rerun()
+                    st.rerun()
       
 
 # -----------------------------
@@ -558,6 +555,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
