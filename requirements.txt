@@ -1,7 +1,5 @@
 streamlit
 pandas
-openpyxl
-requests
 gspread
-oauth2client
-python-dotenv
+google-auth
+requests
