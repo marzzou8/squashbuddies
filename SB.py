@@ -151,15 +151,16 @@ days_until_sunday = (6 - today.weekday()) % 7
 first_sunday = today + datetime.timedelta(days=days_until_sunday)
 next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
 
-booking_date = st.date_input("Court booking date", value=datetime.date.today())
-if booking_date.weekday() != 6:
-    st.error("⚠️ Court bookings should be on Sunday.")
-
 elif option == "Expense":
     expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
     
     if expense_type == "Court Booking":
-        booking_date = st.date_input("Court booking date", value=datetime.date.today())
+        
+        booking_date = st.selectbox(
+        "Court booking date",
+        next_sundays,
+        format_func=lambda d: d.strftime("%d %b %y")
+        )
         if booking_date.weekday() != 6:
             st.error("⚠️ Court bookings should be on Sunday.")
         else:
@@ -299,6 +300,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
