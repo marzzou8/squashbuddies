@@ -11,42 +11,6 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Authenticate using secrets.toml
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
-)
-client = gspread.authorize(creds)
-
-import streamlit as st
-
-# Step 1: Debug secrets
-st.write("Secrets loaded:", st.secrets.keys())
-
-# Now continue with your imports and authentication
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import pandas as pd
-
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
-)
-client = gspread.authorize(creds)
-
-# Test connection
-sheet = client.open("SquashBuddies").sheet1
-records = pd.DataFrame(sheet.get_all_records())
-st.write("✅ Connected to Google Sheets!")
-st.dataframe(records.tail())
-
-# Open your sheet (replace with your sheet name)
-sheet = client.open("SquashBuddies").sheet1
-
 # Load secrets from .streamlit/secrets.toml
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
@@ -353,6 +317,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
