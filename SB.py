@@ -28,18 +28,6 @@ creds = Credentials.from_service_account_info(
 client = gspread.authorize(creds)
 sheet = client.open_by_key("15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654").sheet1
 
-
-# Test Telegram notification
-def send_telegram_message(text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": text}
-    response = requests.post(url, data=payload)
-    return response.json()
-
-# Send a test message
-result = send_telegram_message("✅ SquashBuddies app connected successfully!")
-st.write("Telegram test result:", result)
-
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
@@ -342,6 +330,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
