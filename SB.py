@@ -275,7 +275,7 @@ elif option == "Remove Booking":
         st.info("No bookings found.")
 # --- Dashboard ---
 st.subheader("📊 Records Overview")
-records = pd.DataFrame(sheet.get_all_records())
+records["Date"] = pd.to_datetime(records["Date"], errors="coerce")
 
 # st.dataframe(records)
 
@@ -329,6 +329,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
