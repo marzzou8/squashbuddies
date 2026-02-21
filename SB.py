@@ -228,7 +228,7 @@ elif option == "Remove Booking":
             st.success(f"❌ Booking removed for {remove_player}")
             # Build summary and send Telegram
             next_sunday = first_sunday
-            court_bookings = records[records["Description"] "Court booking"] if not records.empty else pd.DataFrame()
+            court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
             attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
             player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
             summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
@@ -290,5 +290,6 @@ if st.button("🔄 Reset Records", key="btn_reset"):
     ])
     records.to_excel(excel_file, index=False)
     st.success("✅ Records have been reset. The app is now blank.")
+
 
 
