@@ -7,354 +7,532 @@ import streamlit as st
 import pandas as pd
 import datetime
 import requests
-import os
 import gspread
 from google.oauth2.service_account import Credentials
 
-# Load Telegram secrets
+# -----------------------------
+# CONFIG
+# -----------------------------
+SPREADSHEET_ID = "15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654"
+DEFAULT_TIME_SLOT = "2–5pm"
+DEFAULT_FEE = 4  # collection amount when marking paid
+
+EXPECTED_COLUMNS = [
+    "Date", "Player Name", "Paid", "Court", "Time Slot",
+    "Collection", "Expense", "Balance", "Description"
+]
+
+# -----------------------------
+# SECRETS
+# -----------------------------
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 
+# -----------------------------
+# GOOGLE SHEETS AUTH
+# -----------------------------
 scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-
 creds = Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
     scopes=scopes
 )
-
 client = gspread.authorize(creds)
 
-sheet = client.open_by_key("15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654").sheet1
+# Open the spreadsheet + first worksheet
+sheet = client.open_by_key(SPREADSHEET_ID).sheet1
 
 
-# Load records into DataFrame
-records = pd.DataFrame(sheet.get_all_records())
-
-# If sheet is empty, initialize with your columns
-if records.empty:
-    records = pd.DataFrame(columns=[
-        "Date", "Player Name", "Paid", "Court", "Time Slot",
-        "Collection", "Expense", "Balance", "Description"
-    ])
-
-def send_telegram_message(message):
+# -----------------------------
+# HELPERS
+# -----------------------------
+def send_telegram_message(message: str):
+    """Send plain text Telegram message (no Markdown to avoid formatting issues)."""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": message}
-    requests.post(url, data=payload)
+    try:
+        requests.post(url, data=payload, timeout=10)
+    except Exception:
+        # Don't crash app if Telegram fails
+        pass
 
-def build_update_message(next_sunday, court_bookings, attendance_count, player_names):
-    # Format the date
-    message_lines = []
-    message_lines.append(f"**Date:** {next_sunday.strftime('%d %b %y')}")
 
-    # Court bookings
-    if not court_bookings.empty:
-        for _, row in court_bookings.iterrows():
-            message_lines.append(f"📋 **Court:** {int(row['Court'])} | **Time:** {row['Time Slot']} | (Date {pd.to_datetime(row['Date']).strftime('%d %b %Y')})")
-    else:
-        message_lines.append("No court bookings yet.")
-    # Attendance
-    message_lines.append(f"👥 **Attendance:** {attendance_count} players")
+def get_next_sundays(n=4):
+    today = datetime.date.today()
+    days_until_sunday = (6 - today.weekday()) % 7
+    first_sunday = today + datetime.timedelta(days=days_until_sunday)
+    return [first_sunday + datetime.timedelta(weeks=i) for i in range(n)]
 
-    # Player names
-    if player_names:
-        message_lines.append("**Players signed up:**")
-        for name in sorted(player_names):
-            message_lines.append(f"- {name}")
-    else:
-        message_lines.append("No players signed up yet.")
 
-    # Join everything into one string
-    return "\n".join(message_lines)
+def ensure_sheet_headers():
+    """
+    Ensure the Google Sheet has the expected header row.
+    If the sheet is empty OR header row mismatches, we rewrite headers (and keep existing rows if possible).
+    """
+    header = sheet.row_values(1)
+
+    # If totally empty, insert headers
+    if not header:
+        sheet.insert_row(EXPECTED_COLUMNS, 1)
+        return
+
+    # Normalize header (strip spaces)
+    normalized = [h.strip() for h in header]
+    if normalized != EXPECTED_COLUMNS:
+        # Best effort: If mismatch, rewrite header row only (do NOT clear data).
+        # This prevents KeyErrors. If your data columns are different, fix sheet manually.
+        sheet.delete_rows(1)
+        sheet.insert_row(EXPECTED_COLUMNS, 1)
+
+
+@st.cache_data(ttl=15, show_spinner=False)
+def load_records_cached(_cache_bust: int = 0):
+    """
+    Load records from sheet into a DataFrame with a stable schema.
+    Adds '_row' column = actual sheet row number (for updates/deletes).
+    """
+    ensure_sheet_headers()
+
+    values = sheet.get_all_values()
+    if len(values) <= 1:
+        # only headers or empty
+        df = pd.DataFrame(columns=EXPECTED_COLUMNS)
+        df["_row"] = pd.Series(dtype=int)
+        return df
+
+    headers = [h.strip() for h in values[0]]
+    rows = values[1:]
+
+    df = pd.DataFrame(rows, columns=headers)
+
+    # Force schema: add missing expected columns
+    for col in EXPECTED_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+
+    # Keep only expected columns (in correct order)
+    df = df[EXPECTED_COLUMNS]
+
+    # Track sheet row numbers (data starts from row 2)
+    df["_row"] = range(2, 2 + len(df))
+
+    # Type cleanup
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.date
+
+    # Paid might come back as text; normalize to bool
+    def to_bool(x):
+        if isinstance(x, bool):
+            return x
+        s = str(x).strip().lower()
+        return s in ("true", "yes", "1")
+
+    df["Paid"] = df["Paid"].apply(to_bool)
+
+    # numeric columns
+    for c in ["Collection", "Expense", "Balance"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+
+    # Court column numeric-ish
+    df["Court"] = pd.to_numeric(df["Court"], errors="coerce")
+
+    # Strings
+    df["Player Name"] = df["Player Name"].astype(str).replace("nan", "").fillna("")
+    df["Time Slot"] = df["Time Slot"].astype(str).replace("nan", "").fillna("")
+    df["Description"] = df["Description"].astype(str).replace("nan", "").fillna("")
+
+    return df
+
+
+def bust_cache():
+    # Bump a counter in session state so cached function reloads
+    st.session_state["_cache_bust"] = st.session_state.get("_cache_bust", 0) + 1
+
 
 def load_records():
-    return pd.DataFrame(sheet.get_all_records())
+    return load_records_cached(st.session_state.get("_cache_bust", 0))
 
-def save_record(record_dict):
-    # Ensure order matches your sheet headers
-    row = [
-        record_dict.get("Date"),
-        record_dict.get("Player Name"),
-        record_dict.get("Paid"),
-        record_dict.get("Court"),
-        record_dict.get("Time Slot"),
-        record_dict.get("Collection"),
-        record_dict.get("Expense"),
-        record_dict.get("Balance"),
-        record_dict.get("Description"),
-    ]
-    sheet.append_row(row)
 
+def append_record(record):
+    """
+    Append a record dict to Google Sheet in EXPECTED_COLUMNS order.
+    record keys should match EXPECTED_COLUMNS.
+    """
+    row = []
+    for col in EXPECTED_COLUMNS:
+        val = record.get(col, "")
+        if isinstance(val, (datetime.date, datetime.datetime)):
+            val = val.strftime("%Y-%m-%d")
+        elif val is None:
+            val = ""
+        row.append(val)
+    sheet.append_row(row, value_input_option="USER_ENTERED")
+
+
+def update_row_cells(sheet_row: int, updates: dict):
+    """
+    Update specific columns for a given sheet row (e.g., mark Paid).
+    updates: {"Paid": True, "Collection": 4, ...}
+    """
+    # Map header to column index
+    header = [h.strip() for h in sheet.row_values(1)]
+    col_map = {name: idx + 1 for idx, name in enumerate(header)}  # 1-based
+
+    cells = []
+    for k, v in updates.items():
+        if k not in col_map:
+            continue
+        col = col_map[k]
+        if isinstance(v, bool):
+            v = "TRUE" if v else "FALSE"
+        cells.append(gspread.Cell(sheet_row, col, v))
+
+    if cells:
+        sheet.update_cells(cells, value_input_option="USER_ENTERED")
+
+
+def delete_sheet_rows(row_numbers):
+    """Delete multiple rows safely from bottom to top."""
+    for r in sorted(row_numbers, reverse=True):
+        sheet.delete_rows(r)
+
+
+def build_update_message(next_sunday, court_bookings_df, attendance_df):
+    lines = []
+    lines.append(f"Date: {next_sunday.strftime('%d %b %y')}")
+
+    if not court_bookings_df.empty:
+        lines.append("Court bookings:")
+        for _, r in court_bookings_df.iterrows():
+            court = int(r["Court"]) if pd.notna(r["Court"]) else ""
+            lines.append(f" - Court {court} | {r['Time Slot']}")
+    else:
+        lines.append("No court bookings yet.")
+
+    lines.append(f"Attendance: {len(attendance_df)} player(s)")
+
+    names = sorted([n for n in attendance_df["Player Name"].tolist() if str(n).strip()])
+    if names:
+        lines.append("Players signed up:")
+        for n in names:
+            lines.append(f" - {n}")
+    else:
+        lines.append("No players signed up yet.")
+
+    return "\n".join(lines)
+
+
+# -----------------------------
+# UI
+# -----------------------------
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
-import streamlit as st
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import pandas as pd
+# Load data
+records = load_records()
+
+# Tabs (clickable list)
+tab_player, tab_payment, tab_expense, tab_remove, tab_dashboard = st.tabs([
+    "👤 Player Attendance",
+    "💰 Mark Payment",
+    "📉 Expense",
+    "❌ Remove Booking",
+    "📊 Dashboard"
+])
+
+next_sundays = get_next_sundays(4)
+next_sunday = next_sundays[0]
 
 
-option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
+# -----------------------------
+# TAB: PLAYER
+# -----------------------------
+with tab_player:
+    st.subheader("Player Attendance")
 
-payment_number = "97333133"
-excel_file = "SB.xlsx"
-
-# Load all records into a DataFrame
-records = pd.DataFrame(sheet.get_all_records())
-
-# --- Generate next 4 Sundays ---
-today = datetime.date.today()
-days_until_sunday = (6 - today.weekday()) % 7
-first_sunday = today + datetime.timedelta(days=days_until_sunday)
-next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
-
-# --- Player Attendance ---
-if option == "Player":
-    player_name = st.text_input("Enter your name")
+    player_name = st.text_input("Enter your name", key="player_name").strip()
     play_date = st.selectbox(
         "Select Sunday date",
         next_sundays,
-        format_func=lambda d: d.strftime("%d %b %y")
+        format_func=lambda d: d.strftime("%d %b %y"),
+        key="play_date"
     )
 
-    if player_name and st.button("Save Attendance"):
-        new_record = {
-            "Date": play_date,
-            "Player Name": player_name,
-            "Paid": False,
-            "Court": None,
-            "Time Slot": "2–5pm",
-            "Collection": 0,
-            "Expense": 0,
-            "Balance": 0,
-            "Description": "Attendance"
-        }
-        records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-        records.to_excel(excel_file, index=False)
-        st.success("✅ See you at court!")
-          # Build summary and send Telegram
-        next_sunday = first_sunday
-        court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
-        attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
-        player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
-        summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-        send_telegram_message(summary_message)
+    # Prevent duplicates (same date + player + attendance)
+    existing = records[
+        (records["Description"].str.lower() == "attendance") &
+        (records["Date"] == play_date) &
+        (records["Player Name"].str.strip().str.lower() == player_name.lower())
+    ] if player_name else pd.DataFrame()
 
-# --- MARK PAYMENT ---
-elif option == "Mark Payment":
-    unpaid_records = records[(records["Paid"] == False)]
-    if not unpaid_records.empty:
-        selected_indices = st.multiselect(
-            "Select players to mark as paid",
-            unpaid_records.index,
-            format_func=lambda i: f"{unpaid_records.loc[i, 'Player Name']} (Date: {pd.to_datetime(unpaid_records.loc[i, 'Date']).strftime('%d %b %Y')})"
+    if st.button("Save Attendance", key="btn_save_attendance"):
+        if not player_name:
+            st.error("Please enter your name.")
+        elif not existing.empty:
+            st.warning("You already signed up for this date.")
+        else:
+            append_record({
+                "Date": play_date,
+                "Player Name": player_name,
+                "Paid": False,
+                "Court": "",
+                "Time Slot": DEFAULT_TIME_SLOT,
+                "Collection": 0,
+                "Expense": 0,
+                "Balance": 0,
+                "Description": "Attendance"
+            })
+            bust_cache()
+            st.success("✅ See you at court!")
+
+            # Refresh data and send Telegram summary
+            new_df = load_records()
+            sunday_df = new_df[new_df["Date"] == next_sunday]
+            attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
+            court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
+            send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
+
+
+# -----------------------------
+# TAB: MARK PAYMENT
+# -----------------------------
+with tab_payment:
+    st.subheader("Mark Payment")
+
+    unpaid = records[
+        (records["Description"].str.lower() == "attendance") &
+        (records["Paid"] == False) &
+        (records["Player Name"].str.strip() != "")
+    ].copy()
+
+    if unpaid.empty:
+        st.info("No unpaid players found.")
+    else:
+        # Create display labels
+        unpaid["label"] = unpaid.apply(
+            lambda r: f"{r['Player Name']} | {r['Date'].strftime('%d %b %y') if pd.notna(r['Date']) else 'No date'}",
+            axis=1
         )
 
-        if st.button("Confirm Payment", key="btn_payment"):
-            today = datetime.date.today()
-            days_until_sunday = (6 - today.weekday()) % 7
-            next_sunday = today + datetime.timedelta(days=days_until_sunday)
+        selected_labels = st.multiselect(
+            "Select player entries to mark as paid",
+            unpaid["label"].tolist(),
+            key="ms_paid"
+        )
 
-            marked_names = []
-            for i in selected_indices:
-                player_name = unpaid_records.loc[i, "Player Name"]
-
-                # Mark payment
-                records.loc[i, ["Paid", "Collection", "Balance"]] = [True, 4, 4]
-                marked_names.append(player_name)
-
-                # Auto‑signup for next Sunday
-                new_record = {
-                    "Date": next_sunday,
-                    "Player Name": player_name,
-                    "Paid": False,
-                    "Court": None,
-                    "Time Slot": "2–5pm",
-                    "Collection": 0,
-                    "Expense": 0,
-                    "Balance": 0,
-                    "Description": "Attendance"
-                }
-                records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-
-            records.to_excel(excel_file, index=False)
-
-            st.success(f"✅ Payment marked and auto‑signup done for: {', '.join(marked_names)}")
-
-            # Build and send summary
-            court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
-            attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
-            player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
-
-            summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-            send_telegram_message(summary_message)
-    else:
-        st.info("No unpaid players found.")
-# --- EXPENSE ---
-elif option == "Expense":
-    expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
-    
-    if expense_type == "Court Booking":
-        booking_date = st.date_input("Court booking date", value=datetime.date.today())
-        if booking_date.weekday() != 6:
-            st.error("⚠️ Court bookings should be on Sunday.")
-        else:
-            court_number = st.selectbox("Court number", [1, 2, 3, 4, 5])
-            time_slot = st.selectbox("Time slot", ["2–3pm", "2–4pm", "3–4pm", "4–5pm"])
-            
-            # Dynamic expense based on duration
-            if time_slot == "2–4pm":
-                expense_amount = 12
+        if st.button("Confirm Payment", key="btn_confirm_payment"):
+            if not selected_labels:
+                st.warning("Please select at least one entry.")
             else:
-                expense_amount = 6
+                to_update = unpaid[unpaid["label"].isin(selected_labels)]
+                marked_names = []
 
-            st.write(f"Court {court_number} booked on {booking_date} for {time_slot}. Expense: SGD {expense_amount}")
-            
-            if st.button("Save Court Expense"):
-                new_record = {
-                    "Date": booking_date,
-                    "Player Name": None,
-                    "Paid": None,
-                    "Court": court_number,
-                    "Time Slot": time_slot,
-                    "Collection": 0,
-                    "Expense": expense_amount,
-                    "Balance": -expense_amount,
-                    "Description": "Court booking"
-                }
-                records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-                records.to_excel(excel_file, index=False)
-                st.success("✅ Court expense saved to Excel!")
-                # Build summary and send Telegram
-                next_sunday = first_sunday
-                court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
-                attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
-                player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
-                summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-                send_telegram_message(summary_message)
-    
-    else:
-        booking_date = st.date_input("Expense date", value=datetime.date.today())
-        expense_amount = st.number_input("Enter expense amount (SGD)", min_value=0)
-        description = st.text_input("Description of expense")
-        
-        if st.button("Save Other Expense"):
-            new_record = {
+                for _, r in to_update.iterrows():
+                    sheet_row = int(r["_row"])
+                    marked_names.append(r["Player Name"])
+
+                    # Mark paid and set collection/balance
+                    update_row_cells(sheet_row, {
+                        "Paid": True,
+                        "Collection": DEFAULT_FEE,
+                        "Balance": DEFAULT_FEE
+                    })
+
+                    # Auto-signup next Sunday (optional behavior kept from your earlier logic)
+                    append_record({
+                        "Date": next_sunday,
+                        "Player Name": r["Player Name"],
+                        "Paid": False,
+                        "Court": "",
+                        "Time Slot": DEFAULT_TIME_SLOT,
+                        "Collection": 0,
+                        "Expense": 0,
+                        "Balance": 0,
+                        "Description": "Attendance"
+                    })
+
+                bust_cache()
+                st.success(f"✅ Payment marked + auto-signup added for: {', '.join(marked_names)}")
+
+                # Telegram summary
+                new_df = load_records()
+                sunday_df = new_df[new_df["Date"] == next_sunday]
+                attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
+                court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
+                send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
+
+
+# -----------------------------
+# TAB: EXPENSE
+# -----------------------------
+with tab_expense:
+    st.subheader("Expense")
+
+    expense_type = st.radio("Expense type:", ["Court Booking", "Others"], key="expense_type")
+
+    if expense_type == "Court Booking":
+        booking_date = st.selectbox(
+            "Court booking date",
+            next_sundays,
+            format_func=lambda d: d.strftime("%d %b %y"),
+            key="booking_date"
+        )
+
+        court_number = st.selectbox("Court number", [1, 2, 3, 4, 5], key="court_number")
+        time_slot = st.selectbox("Time slot", ["2–3pm", "2–4pm", "3–4pm", "4–5pm"], key="time_slot")
+
+        expense_amount = 12 if time_slot == "2–4pm" else 6
+        st.write(f"Court {court_number} booked on {booking_date.strftime('%d %b %y')} for {time_slot}. Expense: SGD {expense_amount}")
+
+        if st.button("Save Court Expense", key="btn_save_court_expense"):
+            append_record({
                 "Date": booking_date,
-                "Player Name": None,
-                "Paid": None,
-                "Court": None,
-                "Time Slot": None,
+                "Player Name": "",
+                "Paid": "",
+                "Court": court_number,
+                "Time Slot": time_slot,
                 "Collection": 0,
                 "Expense": expense_amount,
                 "Balance": -expense_amount,
-                "Description": description
-            }
-            records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-            records.to_excel(excel_file, index=False)
-            st.success("✅ Other expense saved to Excel!")
-            # Build summary and send Telegram
-            next_sunday = first_sunday
-            court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
-            attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
-            player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
-            summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-            send_telegram_message(summary_message)
+                "Description": "Court booking"
+            })
+            bust_cache()
+            st.success("✅ Court booking expense saved!")
 
-# --- REMOVE BOOKING ---
-elif option == "Remove Booking":
-    st.subheader("Remove Booking")
-    booked_players = records[records["Player Name"].notna()]["Player Name"].tolist()
-    if booked_players:
-        remove_player = st.selectbox("Select player to remove", booked_players)
-        if st.button("Confirm Remove"):
-            records = records.drop(records[records["Player Name"] == remove_player].index)
-            records.to_excel(excel_file, index=False)
-            st.success(f"❌ Booking removed for {remove_player}")
-            # Build summary and send Telegram
-            next_sunday = first_sunday
-            court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
-            attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
-            player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
-            summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
-            send_telegram_message(summary_message)
+            # Telegram summary
+            new_df = load_records()
+            sunday_df = new_df[new_df["Date"] == next_sunday]
+            attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
+            court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
+            send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
+
     else:
-        st.info("No bookings found.")
-# --- Dashboard ---
-st.subheader("📊 Records Overview")
-records["booking_date"] = pd.to_datetime(
-    records.get("Date"),
-    errors="coerce"
-)
-records = pd.DataFrame(
-    sheet.get_all_records(),
-    columns=[
-        "Date", "Player Name", "Paid", "Court", "Time Slot",
-        "Collection", "Expense", "Balance", "Description"
+        booking_date = st.date_input("Expense date", value=datetime.date.today(), key="other_exp_date")
+        expense_amount = st.number_input("Enter expense amount (SGD)", min_value=0, step=1, key="other_exp_amt")
+        description = st.text_input("Description of expense", key="other_exp_desc").strip()
+
+        if st.button("Save Other Expense", key="btn_save_other_expense"):
+            if not description:
+                st.error("Please enter a description.")
+            else:
+                append_record({
+                    "Date": booking_date,
+                    "Player Name": "",
+                    "Paid": "",
+                    "Court": "",
+                    "Time Slot": "",
+                    "Collection": 0,
+                    "Expense": expense_amount,
+                    "Balance": -expense_amount,
+                    "Description": description
+                })
+                bust_cache()
+                st.success("✅ Expense saved!")
+
+                # Telegram summary
+                new_df = load_records()
+                sunday_df = new_df[new_df["Date"] == next_sunday]
+                attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
+                court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
+                send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
+
+
+# -----------------------------
+# TAB: REMOVE BOOKING
+# -----------------------------
+with tab_remove:
+    st.subheader("Remove Booking")
+
+    # Let user remove attendance entries for upcoming Sunday by default
+    sunday_df = records[records["Date"] == next_sunday].copy()
+    attendance_df = sunday_df[
+        (sunday_df["Description"].str.lower() == "attendance") &
+        (sunday_df["Player Name"].str.strip() != "")
+    ].copy()
+
+    if attendance_df.empty:
+        st.info("No attendance bookings found for next Sunday.")
+    else:
+        attendance_df["label"] = attendance_df.apply(
+            lambda r: f"{r['Player Name']} | {r['Date'].strftime('%d %b %y') if pd.notna(r['Date']) else 'No date'}",
+            axis=1
+        )
+
+        selected = st.multiselect(
+            "Select bookings to remove",
+            attendance_df["label"].tolist(),
+            key="ms_remove"
+        )
+
+        if st.button("Confirm Remove", key="btn_confirm_remove"):
+            if not selected:
+                st.warning("Select at least one booking to remove.")
+            else:
+                to_delete = attendance_df[attendance_df["label"].isin(selected)]
+                rows = to_delete["_row"].astype(int).tolist()
+                delete_sheet_rows(rows)
+                bust_cache()
+                st.success(f"❌ Removed {len(rows)} booking(s).")
+
+                # Telegram summary
+                new_df = load_records()
+                sunday_df2 = new_df[new_df["Date"] == next_sunday]
+                attendance_df2 = sunday_df2[(sunday_df2["Description"].str.lower() == "attendance")]
+                court_df2 = sunday_df2[(sunday_df2["Description"].str.lower() == "court booking")]
+                send_telegram_message(build_update_message(next_sunday, court_df2, attendance_df2))
+
+
+# -----------------------------
+# TAB: DASHBOARD
+# -----------------------------
+with tab_dashboard:
+    st.subheader("📊 Records Overview")
+
+    # Always reload for dashboard
+    df = records.copy()
+
+    st.write(f"Next Sunday: {next_sunday.strftime('%d %b %y')}")
+
+    sunday_df = df[df["Date"] == next_sunday]
+
+    attendance_df = sunday_df[
+        (sunday_df["Description"].str.lower() == "attendance") &
+        (sunday_df["Player Name"].str.strip() != "")
     ]
-)
 
-# st.dataframe(records)
+    court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
 
-# Calculate next Sunday
-today = datetime.date.today()
-days_until_sunday = (6 - today.weekday()) % 7
-next_sunday = today + datetime.timedelta(days=days_until_sunday)
+    # Court summary
+    st.markdown("### Court bookings")
+    if not court_df.empty:
+        for _, r in court_df.iterrows():
+            court = int(r["Court"]) if pd.notna(r["Court"]) else ""
+            st.write(f"📋 Court {court} | {r['Time Slot']}")
+    else:
+        st.write("No court bookings yet.")
 
-# Filter records for that Sunday
-sunday_records = records[records["Date"] == pd.to_datetime(next_sunday)]
+    # Attendance summary
+    st.markdown("### Attendance")
+    st.write(f"👥 {len(attendance_df)} player(s)")
+    names = sorted([n for n in attendance_df["Player Name"].tolist() if str(n).strip()])
+    if names:
+        for n in names:
+            st.write(f"- {n}")
+    else:
+        st.write("No players signed up yet.")
 
-# Attendance count and player names
-attendance_records = sunday_records[sunday_records["Player Name"].notna()]
-attendance_count = attendance_records.shape[0]
-player_names = attendance_records["Player Name"].tolist()
+    # Finance summary
+    total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
+    total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
+    balance = total_collection - total_expense
 
-# Court bookings summary
-court_bookings = sunday_records[sunday_records["Description"] == "Court booking"]
+    st.markdown("### 💰 Finance")
+    st.write(f"Total Collection: SGD {total_collection:.2f}")
+    st.write(f"Total Expense: SGD {total_expense:.2f}")
+    st.write(f"Current Balance: SGD {balance:.2f}")
 
-# Display summary
-st.write(f"**Date:** {next_sunday.strftime('%d %b %y')}")
-if not court_bookings.empty:
-    for _, row in court_bookings.iterrows():
-        st.write(f"📋 **Court:** {row['Court']} | **Time:** {row['Time Slot']}")
-else:
-    st.write("No court bookings yet.")
-
-st.write(f"👥 **Attendance:** {attendance_count} players")
-
-# Show player names if any
-if player_names:
-    st.write("**Players signed up:**")
-    for name in player_names:
-        st.write(f"- {name}")
-else:
-    st.write("No players signed up yet.")
-
-total_collection = records["Collection"].sum()
-total_expense = records["Expense"].sum()
-balance = total_collection - total_expense
-
-st.write(f"Total Collection: SGD {total_collection}")
-st.write(f"Total Expense: SGD {total_expense}")
-st.write(f"💰 Current Balance: SGD {balance}")
-
-#if st.button("🔄 Reset Records", key="btn_reset"):
-    # Create a fresh empty DataFrame with the right columns
-#    records = pd.DataFrame(columns=[
-#        "Date", "Player Name", "Paid", "Court", "Time Slot",
-#        "Collection", "Expense", "Balance", "Description"
-#    ])
-#    records.to_excel(excel_file, index=False)
-#    st.success("✅ Records have been reset. The app is now blank.")
-
-
-
-
-
-
-
+    with st.expander("Show raw records"):
+        st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
 
 
 
