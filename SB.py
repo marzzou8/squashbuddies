@@ -10,6 +10,7 @@ import requests
 import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
 # Debug: show which secrets are loaded
 st.write("Secrets loaded:", st.secrets.keys())
@@ -19,19 +20,17 @@ TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 
 # Load Google Sheets credentials
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
 )
-client = gspread.authorize(creds)
 
-# Test Google Sheets connection
-sheet = client.open("SquashBuddies").sheet1
-records = pd.DataFrame(sheet.get_all_records())
-st.write("✅ Connected to Google Sheets!")
-st.dataframe(records.tail())
+client = gspread.authorize(creds)
+sheet = client.open_by_key("SquashBuddies").sheet1
+
 
 # Test Telegram notification
 def send_telegram_message(text):
@@ -346,6 +345,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
