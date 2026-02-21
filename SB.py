@@ -16,17 +16,27 @@ from google.oauth2.service_account import Credentials
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 
-# Load Google Sheets credentials
-creds = Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"],
-    scopes=[
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-)
+# Authenticate with Google Sheets
+scope = ["https://spreadsheets.google.com/feeds",
+         "https://www.googleapis.com/auth/drive"]
 
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
 client = gspread.authorize(creds)
+
+# Open your sheet by name
 sheet = client.open_by_key("15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654").sheet1
+
+# Load records into DataFrame
+records = pd.DataFrame(sheet.get_all_records())
+
+# If sheet is empty, initialize with your columns
+if records.empty:
+    records = pd.DataFrame(columns=[
+        "Date", "Player Name", "Paid", "Court", "Time Slot",
+        "Collection", "Expense", "Balance", "Description"
+    ])
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -77,6 +87,12 @@ def save_record(record_dict):
     sheet.append_row(row)
 
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
+
+import streamlit as st
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
+
 
 option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
 
@@ -319,6 +335,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
