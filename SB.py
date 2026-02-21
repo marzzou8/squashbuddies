@@ -270,7 +270,7 @@ st.write(f"👥 **Attendance:** {attendance_count} players")
 if player_names:
     st.write("**Players signed up:**")
     for name in sorted(player_names):
-        st.write(name)
+        st.write(f"- {name}")
 else:
     st.write("No players signed up yet.")
 
@@ -290,6 +290,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
