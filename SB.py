@@ -226,9 +226,6 @@ def build_update_message(next_sunday, court_bookings_df, attendance_df):
 # -----------------------------
 # UI
 # -----------------------------
-st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
-
-
 # Load data
 records = load_records()
 
@@ -467,6 +464,7 @@ balance = total_collection - total_expense
 st.write(f"💰 Collection: SGD {total_collection}")
 st.write(f"📉 Expense: SGD {total_expense}")
 st.write(f"✅ Balance: SGD {balance}")
+
 
 
 
