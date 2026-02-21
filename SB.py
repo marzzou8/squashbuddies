@@ -429,26 +429,36 @@ elif st.session_state.page == "remove":
 st.divider()
 st.subheader("📊 Dashboard")
 
+# ✅ ALWAYS reload fresh data here
 df = load_records()
 
 dashboard_date = st.selectbox(
     "Dashboard Sunday",
     next_sundays,
-    format_func=lambda d: d.strftime("%d %b %y")
+    format_func=lambda d: d.strftime("%d %b %y"),
+    key="dashboard_date"
 )
 
 sunday_df = df[df["Date"] == dashboard_date]
 
-attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"]
-court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
+attendance_df = sunday_df[
+    sunday_df["Description"].str.lower().str.strip() == "attendance"
+]
+
+court_df = sunday_df[
+    sunday_df["Description"].str.lower().str.strip() == "court booking"
+]
 
 st.write(f"👥 Attendance: {len(attendance_df)}")
 for n in sorted(attendance_df["Player Name"].dropna()):
     st.write(f"- {n}")
 
 st.write("📋 Court bookings")
-for _, r in court_df.iterrows():
-    st.write(f"Court {int(r['Court'])} | {r['Time Slot']}")
+if court_df.empty:
+    st.write("No court bookings.")
+else:
+    for _, r in court_df.iterrows():
+        st.write(f"Court {int(r['Court'])} | {r['Time Slot']}")
 
 total_collection = df["Collection"].sum()
 total_expense = df["Expense"].sum()
@@ -457,6 +467,7 @@ balance = total_collection - total_expense
 st.write(f"💰 Collection: SGD {total_collection}")
 st.write(f"📉 Expense: SGD {total_expense}")
 st.write(f"✅ Balance: SGD {balance}")
+
 
 
 
