@@ -205,7 +205,9 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
     balance = total_collection - total_expense
 
     lines.append("")
-    lines.append("💰 Finance (All‑time)")
+    lines.append("Court share @$4")
+    lines.append("Cash or playnow/paylah to 97333133")
+    lines.append("💰 Our Fund:")
     lines.append(f" Collection: SGD {total_collection:.2f}")
     lines.append(f" Expense: SGD {total_expense:.2f}")
     lines.append(f" Balance: SGD {balance:.2f}")
@@ -299,7 +301,7 @@ if st.session_state.page == "player":
                 "Description": "Attendance",
             })
             bust_cache()
-            st.success("Saved ✅ Telegram sent.")
+            st.success("Saved ✅ See you at court!")
             send_dashboard_telegram(play_date)
             st.rerun()
 
@@ -500,7 +502,9 @@ st.write(f"{len(names)} player(s)")
 for n in names:
     st.write(f"- {n}")
 
-st.markdown("### 💰 Finance (All‑time)")
+st.markdow("### Court share @$4
+Cash or playnow/paylah to      97333133")
+st.markdown("### 💰 Our Funds")
 total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
 balance = total_collection - total_expense
@@ -511,6 +515,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
