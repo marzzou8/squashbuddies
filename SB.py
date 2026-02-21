@@ -26,7 +26,7 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Court bookings
     if not court_bookings.empty:
         for _, row in court_bookings.iterrows():
-            message_lines.append(f" 📋 **Court:** {int(row['Court'])}  | **Time:** {row['Time Slot']}")
+            message_lines.append(f" 📋 **Court:** {int(row['Court'])}  | **Time:** {row['Time Slot']} | (Date {pd.to_datetime(unpaid_records.loc[i, 'Date']).strftime('%d %b %Y')")
     else:
         message_lines.append("No court bookings yet.")
 
@@ -299,6 +299,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
