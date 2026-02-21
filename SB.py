@@ -104,7 +104,9 @@ first_sunday = today + datetime.timedelta(days=days_until_sunday)
 next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
 
 # --- Player Attendance ---
-if option == "Player":
+with tab_player:
+    st.subheader("Player Attendance")
+
     player_name = st.text_input("Enter your name")
     play_date = st.selectbox(
         "Select Sunday date",
@@ -124,8 +126,8 @@ if option == "Player":
             "Balance": 0,
             "Description": "Attendance"
         }
-        records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
-        records.to_excel(excel_file, index=False)
+
+        sheet.append_row(list(new_record.values()))
         st.success("✅ See you at court!")
           # Build summary and send Telegram
         next_sunday = first_sunday
@@ -339,4 +341,5 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
