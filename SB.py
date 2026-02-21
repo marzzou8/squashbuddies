@@ -36,7 +36,7 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Player names
     if player_names:
         message_lines.append("**Players signed up:**")
-        for name in player_names:
+        for name in sorted(player_names):
             message_lines.append(f"- {name}")
     else:
         message_lines.append("No players signed up yet.")
@@ -269,8 +269,8 @@ st.write(f"👥 **Attendance:** {attendance_count} players")
 # Show player names if any
 if player_names:
     st.write("**Players signed up:**")
-    for name in player_names:
-        st.write(f"- {name}")
+    for name in sorted(player_names):
+        st.write(name)
 else:
     st.write("No players signed up yet.")
 
@@ -290,6 +290,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
