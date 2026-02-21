@@ -8,12 +8,41 @@ import pandas as pd
 import datetime
 import requests
 import os
-import streamlit as st
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Debug: show which secrets are loaded
 st.write("Secrets loaded:", st.secrets.keys())
 
-# Load secrets from .streamlit/secrets.toml
+# Load Telegram secrets
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
+
+# Load Google Sheets credentials
+scope = ["https://spreadsheets.google.com/feeds",
+         "https://www.googleapis.com/auth/drive"]
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
+client = gspread.authorize(creds)
+
+# Test Google Sheets connection
+sheet = client.open("SquashBuddies").sheet1
+records = pd.DataFrame(sheet.get_all_records())
+st.write("✅ Connected to Google Sheets!")
+st.dataframe(records.tail())
+
+# Test Telegram notification
+def send_telegram_message(text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": text}
+    response = requests.post(url, data=payload)
+    return response.json()
+
+# Send a test message
+result = send_telegram_message("✅ SquashBuddies app connected successfully!")
+st.write("Telegram test result:", result)
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -317,6 +346,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
