@@ -78,7 +78,7 @@ def save_record(record_dict):
 
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
-option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense", "Remove Booking"])
+option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
 
 payment_number = "97333133"
 excel_file = "SB.xlsx"
@@ -329,6 +329,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
