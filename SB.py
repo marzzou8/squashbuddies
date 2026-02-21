@@ -469,7 +469,7 @@ elif st.session_state.page == "remove":
 # DASHBOARD (ALWAYS BOTTOM)
 # -----------------------------
 st.divider()
-st.subheader("📊 Dashboard (Always Visible)")
+st.subheader("📊 Dashboard ")
 
 df = load_records()
 
@@ -515,6 +515,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
