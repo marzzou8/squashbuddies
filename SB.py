@@ -283,6 +283,15 @@ elif option == "Remove Booking":
 # --- Dashboard ---
 st.subheader("📊 Records Overview")
 records["booking_date"] = pd.to_datetime(records["Date"], errors="coerce")
+records = pd.DataFrame(
+    sheet.get_all_records(),
+    columns=[
+        "Date", "Player Name", "Paid", "Court", "Time Slot",
+        "Collection", "Expense", "Balance", "Description"
+    ]
+)
+
+records["Date"] = pd.to_datetime(records["Date"], errors="coerce")
 # st.dataframe(records)
 
 # Calculate next Sunday
@@ -291,7 +300,7 @@ days_until_sunday = (6 - today.weekday()) % 7
 next_sunday = today + datetime.timedelta(days=days_until_sunday)
 
 # Filter records for that Sunday
-sunday_records = records[records["booking_date"] == pd.to_datetime(next_sunday)]
+sunday_records = records[records["Date"] == pd.to_datetime(next_sunday)]
 
 # Attendance count and player names
 attendance_records = sunday_records[sunday_records["Player Name"].notna()]
@@ -335,6 +344,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
