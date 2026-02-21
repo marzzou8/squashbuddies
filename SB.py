@@ -246,16 +246,16 @@ with col1:
         st.session_state.page = "player"
 
 with col2:
-    if st.button("💰 Mark Payment"):
-        st.session_state.page = "payment"
-
-with col3:
-    if st.button("📉 Expense"):
-        st.session_state.page = "expense"
-
-with col4:
     if st.button("❌ Remove Booking"):
         st.session_state.page = "remove"
+
+with col3:
+   if st.button("💰 Mark Payment"):
+        st.session_state.page = "payment"
+
+with col4:
+    if st.button("📉 Expense"):
+        st.session_state.page = "expense"
 
 st.divider()
 
@@ -457,6 +457,7 @@ balance = total_collection - total_expense
 st.write(f"💰 Collection: SGD {total_collection}")
 st.write(f"📉 Expense: SGD {total_expense}")
 st.write(f"✅ Balance: SGD {balance}")
+
 
 
 
