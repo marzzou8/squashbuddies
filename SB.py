@@ -460,14 +460,17 @@ else:
     for _, r in court_df.iterrows():
         st.write(f"Court {int(r['Court'])} | {r['Time Slot']}")
 
-total_collection = df["Collection"].sum()
-total_expense = df["Expense"].sum()
-balance = total_collection - total_expense
+st.markdown("### 💰 Our Funds")
 
-st.write(f"💰 Collection: SGD {total_collection}")
-st.write(f"📉 Expense: SGD {total_expense}")
-st.write(f"✅ Balance: SGD {balance}")
+total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
+total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
 
+# ✅ Correct balance calculation
+balance = float(df["Balance"].sum()) if not df.empty else 0.0
+
+st.write(f"Total Collection: SGD {total_collection:.2f}")
+st.write(f"Total Expense: SGD {total_expense:.2f}")
+st.write(f"✅ Current Balance: SGD {balance:.2f}")
 
 
 
