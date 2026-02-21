@@ -8,6 +8,22 @@ import pandas as pd
 import datetime
 import requests
 import os
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
+import streamlit as st
+
+# Authenticate using secrets.toml
+scope = ["https://spreadsheets.google.com/feeds",
+         "https://www.googleapis.com/auth/drive"]
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    st.secrets["gcp_service_account"], scope
+)
+client = gspread.authorize(creds)
+
+# Open your sheet (replace with your sheet name)
+sheet = client.open("SquashBuddies").sheet1
 
 # Load secrets from .streamlit/secrets.toml
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
@@ -43,18 +59,35 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Join everything into one string
     return "\n".join(message_lines)
 
+def load_records():
+    return pd.DataFrame(sheet.get_all_records())
+
+def save_record(record_dict):
+    # Ensure order matches your sheet headers
+    row = [
+        record_dict.get("Date"),
+        record_dict.get("Player Name"),
+        record_dict.get("Paid"),
+        record_dict.get("Court"),
+        record_dict.get("Time Slot"),
+        record_dict.get("Collection"),
+        record_dict.get("Expense"),
+        record_dict.get("Balance"),
+        record_dict.get("Description"),
+    ]
+    sheet.append_row(row)
+
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
 payment_number = "97333133"
 excel_file = "SB.xlsx"
 
-# Load existing records if file exists
-if os.path.exists(excel_file):
-    records = pd.read_excel(excel_file)
-else:
-    records = pd.DataFrame(columns=["Date", "Player Name", "Paid", "Court", "Time Slot", "Collection", "Expense", "Balance", "Description"])
+# Load all records into a DataFrame
+records = pd.DataFrame(sheet.get_all_records())
 
-option = st.radio("Choose an option:", ["Player", "Remove Booking", "Mark Payment", "Expense"])
+# Append a new record
+new_record = ["2026-02-22", "Joyce", False, None, "2–5pm", 0, 0, 0, "Attendance"]
+sheet.append_row(new_record)
 
 # --- Generate next 4 Sundays ---
 today = datetime.date.today()
@@ -298,6 +331,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
