@@ -78,15 +78,15 @@ def save_record(record_dict):
 
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
-option = st.selectbox(
-    "Select action",
-    [
-        "Player",
-        "Mark Payment",
-        "Expense",
-        "Remove Booking"
-    ]
-)
+st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
+
+tab_player, tab_payment, tab_expense, tab_remove = st.tabs([
+    "👤 Player Attendance",
+    "💰 Mark Payment",
+    "📉 Expense",
+    "❌ Remove Booking"
+])
+
 payment_number = "97333133"
 excel_file = "SB.xlsx"
 
@@ -339,3 +339,4 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
