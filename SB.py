@@ -12,9 +12,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from google.oauth2.service_account import Credentials
 
-# Debug: show which secrets are loaded
-st.write("Secrets loaded:", st.secrets.keys())
-
 # Load Telegram secrets
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
@@ -29,7 +26,7 @@ creds = Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet = client.open_by_key("SquashBuddies").sheet1
+sheet = client.open_by_key("15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654").sheet1
 
 
 # Test Telegram notification
@@ -345,6 +342,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
