@@ -320,14 +320,12 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
-# if st.button("🔄 Reset Records", key="btn_reset"):
+ if st.button("🔄 Reset Records", key="btn_reset"):
     # Create a fresh empty DataFrame with the right columns
-#    records = pd.DataFrame(columns=[
-#        "Date", "Player Name", "Paid", "Court", "Time Slot",
-#        "Collection", "Expense", "Balance", "Description"
-#    ])
-#    records.to_excel(excel_file, index=False)
-#    st.success("✅ Records have been reset. The app is now blank.")
-
-
+    records = pd.DataFrame(columns=[
+        "Date", "Player Name", "Paid", "Court", "Time Slot",
+        "Collection", "Expense", "Balance", "Description"
+    ])
+    records.to_excel(excel_file, index=False)
+    st.success("✅ Records have been reset. The app is now blank.")
 
