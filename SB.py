@@ -8,8 +8,6 @@ import pandas as pd
 import datetime
 import requests
 import os
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 # Load secrets from .streamlit/secrets.toml
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
@@ -317,6 +315,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
