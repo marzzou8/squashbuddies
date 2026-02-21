@@ -266,29 +266,19 @@ next_sunday = next_sundays[0]
 # -----------------------------
 # TAB: PLAYER
 # -----------------------------
-with tab_player:
-    st.subheader("Player Attendance")
+if st.session_state.page == "player":
+    st.subheader("👤 Player Attendance")
 
-    player_name = st.text_input("Enter your name", key="player_name").strip()
+    player_name = st.text_input("Enter your name").strip()
     play_date = st.selectbox(
         "Select Sunday date",
         next_sundays,
-        format_func=lambda d: d.strftime("%d %b %y"),
-        key="play_date"
+        format_func=lambda d: d.strftime("%d %b %y")
     )
 
-    # Prevent duplicates (same date + player + attendance)
-    existing = records[
-        (records["Description"].str.lower() == "attendance") &
-        (records["Date"] == play_date) &
-        (records["Player Name"].str.strip().str.lower() == player_name.lower())
-    ] if player_name else pd.DataFrame()
-
-    if st.button("Save Attendance", key="btn_save_attendance"):
+    if st.button("Save Attendance"):
         if not player_name:
             st.error("Please enter your name.")
-        elif not existing.empty:
-            st.warning("You already signed up for this date.")
         else:
             append_record({
                 "Date": play_date,
@@ -303,83 +293,46 @@ with tab_player:
             })
             bust_cache()
             st.success("✅ See you at court!")
-
-            # Refresh data and send Telegram summary
-            new_df = load_records()
-            sunday_df = new_df[new_df["Date"] == next_sunday]
-            attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
-            court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
-            send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
-
-
 # -----------------------------
 # TAB: MARK PAYMENT
 # -----------------------------
-with tab_payment:
-    st.subheader("Mark Payment")
+elif st.session_state.page == "payment":
+    st.subheader("💰 Mark Payment")
 
-    unpaid = records[
-        (records["Description"].str.lower() == "attendance") &
-        (records["Paid"] == False) &
-        (records["Player Name"].str.strip() != "")
+    df = load_records()
+
+    unpaid = df[
+        (df["Description"].str.lower().str.strip() == "attendance") &
+        (df["Paid"] == False) &
+        (df["Player Name"].str.strip() != "")
     ].copy()
 
     if unpaid.empty:
-        st.info("No unpaid players found.")
+        st.info("No unpaid players.")
     else:
-        # Create display labels
         unpaid["label"] = unpaid.apply(
-            lambda r: f"{r['Player Name']} | {r['Date'].strftime('%d %b %y') if pd.notna(r['Date']) else 'No date'}",
+            lambda r: f"{r['Player Name']} | {r['Date'].strftime('%d %b %y')}",
             axis=1
         )
 
-        selected_labels = st.multiselect(
-            "Select player entries to mark as paid",
-            unpaid["label"].tolist(),
-            key="ms_paid"
+        selected = st.multiselect(
+            "Select players who have paid",
+            unpaid["label"].tolist()
         )
 
-        if st.button("Confirm Payment", key="btn_confirm_payment"):
-            if not selected_labels:
-                st.warning("Please select at least one entry.")
-            else:
-                to_update = unpaid[unpaid["label"].isin(selected_labels)]
-                marked_names = []
-
-                for _, r in to_update.iterrows():
-                    sheet_row = int(r["_row"])
-                    marked_names.append(r["Player Name"])
-
-                    # Mark paid and set collection/balance
-                    update_row_cells(sheet_row, {
+        if st.button("Confirm Payment"):
+            for _, r in unpaid[unpaid["label"].isin(selected)].iterrows():
+                update_row_cells(
+                    int(r["_row"]),
+                    {
                         "Paid": True,
                         "Collection": DEFAULT_FEE,
                         "Balance": DEFAULT_FEE
-                    })
+                    }
+                )
 
-                    # Auto-signup next Sunday (optional behavior kept from your earlier logic)
-                    append_record({
-                        "Date": next_sunday,
-                        "Player Name": r["Player Name"],
-                        "Paid": False,
-                        "Court": "",
-                        "Time Slot": DEFAULT_TIME_SLOT,
-                        "Collection": 0,
-                        "Expense": 0,
-                        "Balance": 0,
-                        "Description": "Attendance"
-                    })
-
-                bust_cache()
-                st.success(f"✅ Payment marked + auto-signup added for: {', '.join(marked_names)}")
-
-                # Telegram summary
-                new_df = load_records()
-                sunday_df = new_df[new_df["Date"] == next_sunday]
-                attendance_df = sunday_df[(sunday_df["Description"].str.lower() == "attendance")]
-                court_df = sunday_df[(sunday_df["Description"].str.lower() == "court booking")]
-                send_telegram_message(build_update_message(next_sunday, court_df, attendance_df))
-
+            bust_cache()
+            st.success("✅ Payment updated")
 
 # -----------------------------
 # TAB: EXPENSE
@@ -552,6 +505,7 @@ with tab_dashboard:
 
     with st.expander("Show raw records"):
         st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
