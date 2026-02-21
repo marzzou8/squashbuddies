@@ -10,8 +10,9 @@ import requests
 import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import pandas as pd
-import streamlit as st
+
+st.write(st.secrets["TELEGRAM_TOKEN"])
+st.write(st.secrets["gcp_service_account"]["client_email"])
 
 # Authenticate using secrets.toml
 scope = ["https://spreadsheets.google.com/feeds",
@@ -331,6 +332,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
