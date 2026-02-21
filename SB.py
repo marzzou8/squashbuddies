@@ -11,9 +11,6 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-st.write(st.secrets["TELEGRAM_TOKEN"])
-st.write(st.secrets["gcp_service_account"]["client_email"])
-
 # Authenticate using secrets.toml
 scope = ["https://spreadsheets.google.com/feeds",
          "https://www.googleapis.com/auth/drive"]
@@ -332,6 +329,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
