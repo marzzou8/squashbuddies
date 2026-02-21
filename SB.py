@@ -26,7 +26,7 @@ def build_update_message(next_sunday, court_bookings, attendance_count, player_n
     # Court bookings
     if not court_bookings.empty:
         for _, row in court_bookings.iterrows():
-            message_lines.append(f"🏸 **Court:** {row['Court']} | **Time:** {row['Time Slot']}")
+            message_lines.append(f" 📋 **Court:** {row['Court']} | **Time:** {row['Time Slot']}")
     else:
         message_lines.append("No court bookings yet.")
 
@@ -228,7 +228,7 @@ elif option == "Remove Booking":
             st.success(f"❌ Booking removed for {remove_player}")
             # Build summary and send Telegram
             next_sunday = first_sunday
-            court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
+            court_bookings = records[records["Description"] "Court booking"] if not records.empty else pd.DataFrame()
             attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
             player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
             summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
@@ -282,5 +282,13 @@ st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
 
+if st.button("🔄 Reset Records", key="btn_reset"):
+    # Create a fresh empty DataFrame with the right columns
+    records = pd.DataFrame(columns=[
+        "Date", "Player Name", "Paid", "Court", "Time Slot",
+        "Collection", "Expense", "Balance", "Description"
+    ])
+    records.to_excel(excel_file, index=False)
+    st.success("✅ Records have been reset. The app is now blank.")
 
 
