@@ -106,21 +106,37 @@ elif option == "Mark Payment":
         )
 
         if st.button("Confirm Payment", key="btn_payment"):
-            # Mark all selected players as paid
-            for i in selected_indices:
-                records.loc[i, ["Paid", "Collection", "Balance"]] = [True, 4, 4]
-
-            records.to_excel(excel_file, index=False)
-
-            # Success message
-            marked_names = [unpaid_records.loc[i, "Player Name"] for i in selected_indices]
-            st.success(f"✅ Payment marked for: {', '.join(marked_names)}")
-
-            # Build and send summary
             today = datetime.date.today()
             days_until_sunday = (6 - today.weekday()) % 7
             next_sunday = today + datetime.timedelta(days=days_until_sunday)
 
+            marked_names = []
+            for i in selected_indices:
+                player_name = unpaid_records.loc[i, "Player Name"]
+
+                # Mark payment
+                records.loc[i, ["Paid", "Collection", "Balance"]] = [True, 4, 4]
+                marked_names.append(player_name)
+
+                # Auto‑signup for next Sunday
+                new_record = {
+                    "Date": next_sunday,
+                    "Player Name": player_name,
+                    "Paid": False,
+                    "Court": None,
+                    "Time Slot": "2–5pm",
+                    "Collection": 0,
+                    "Expense": 0,
+                    "Balance": 0,
+                    "Description": "Attendance"
+                }
+                records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
+
+            records.to_excel(excel_file, index=False)
+
+            st.success(f"✅ Payment marked and auto‑signup done for: {', '.join(marked_names)}")
+
+            # Build and send summary
             court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
             attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
             player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
@@ -265,5 +281,6 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
 
 
