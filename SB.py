@@ -177,18 +177,9 @@ elif option == "Mark Payment":
 # --- EXPENSE ---
 elif option == "Expense":
     expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
-    today = datetime.date.today()
-    days_until_sunday = (6 - today.weekday()) % 7
-    first_sunday = today + datetime.timedelta(days=days_until_sunday)
-    next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
-
+    
     if expense_type == "Court Booking":
-        
-        booking_date = st.selectbox(
-        "Court booking date",
-        next_sundays,
-        format_func=lambda d: d.strftime("%d %b %y")
-        )
+        booking_date = st.date_input("Court booking date", value=datetime.date.today())
         if booking_date.weekday() != 6:
             st.error("⚠️ Court bookings should be on Sunday.")
         else:
@@ -276,7 +267,6 @@ elif option == "Remove Booking":
 # --- Dashboard ---
 st.subheader("📊 Records Overview")
 records["Date"] = pd.to_datetime(records["Date"], errors="coerce")
-
 # st.dataframe(records)
 
 # Calculate next Sunday
@@ -299,7 +289,7 @@ court_bookings = sunday_records[sunday_records["Description"] == "Court booking"
 st.write(f"**Date:** {next_sunday.strftime('%d %b %y')}")
 if not court_bookings.empty:
     for _, row in court_bookings.iterrows():
-        st.write(f" 📋 **Court:** {int(row['Court'])} | **Time:** {row['Time Slot']}")
+        st.write(f"🏸 **Court:** {row['Court']} | **Time:** {row['Time Slot']}")
 else:
     st.write("No court bookings yet.")
 
@@ -308,7 +298,7 @@ st.write(f"👥 **Attendance:** {attendance_count} players")
 # Show player names if any
 if player_names:
     st.write("**Players signed up:**")
-    for name in sorted(player_names):
+    for name in player_names:
         st.write(f"- {name}")
 else:
     st.write("No players signed up yet.")
@@ -329,6 +319,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
