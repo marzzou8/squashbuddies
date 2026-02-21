@@ -78,24 +78,13 @@ def save_record(record_dict):
 
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
-st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
-
-tab_player, tab_payment, tab_expense, tab_remove = st.tabs([
-    "👤 Player Attendance",
-    "💰 Mark Payment",
-    "📉 Expense",
-    "❌ Remove Booking"
-])
+option = st.radio("Choose an option:", ["Player", "Mark Payment", "Expense", "Remove Booking"])
 
 payment_number = "97333133"
 excel_file = "SB.xlsx"
 
 # Load all records into a DataFrame
 records = pd.DataFrame(sheet.get_all_records())
-
-# Append a new record
-new_record = ["2026-02-22", "Joyce", False, None, "2–5pm", 0, 0, 0, "Attendance"]
-sheet.append_row(new_record)
 
 # --- Generate next 4 Sundays ---
 today = datetime.date.today()
@@ -104,9 +93,7 @@ first_sunday = today + datetime.timedelta(days=days_until_sunday)
 next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
 
 # --- Player Attendance ---
-with tab_player:
-    st.subheader("Player Attendance")
-
+if option == "Player":
     player_name = st.text_input("Enter your name")
     play_date = st.selectbox(
         "Select Sunday date",
@@ -126,8 +113,8 @@ with tab_player:
             "Balance": 0,
             "Description": "Attendance"
         }
-
-        sheet.append_row(list(new_record.values()))
+        records = pd.concat([records, pd.DataFrame([new_record])], ignore_index=True)
+        records.to_excel(excel_file, index=False)
         st.success("✅ See you at court!")
           # Build summary and send Telegram
         next_sunday = first_sunday
@@ -341,5 +328,6 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
