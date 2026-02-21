@@ -99,25 +99,36 @@ if option == "Player":
 elif option == "Mark Payment":
     unpaid_records = records[(records["Paid"] == False)]
     if not unpaid_records.empty:
-        selected_index = st.selectbox(
-            "Select player to mark as paid",
+        selected_indices = st.multiselect(
+            "Select players to mark as paid",
             unpaid_records.index,
-            format_func=lambda i: f"{unpaid_records.loc[i, 'Player Name']} (Date: {unpaid_records.loc[i, 'Date'].date()})"
+            format_func=lambda i: f"{unpaid_records.loc[i, 'Player Name']} (Date: {pd.to_datetime(unpaid_records.loc[i, 'Date']).strftime('%d %b %Y')})"
         )
-        if st.button("Confirm Payment"):
-            records.loc[selected_index, ["Paid","Collection","Balance"]] = [True, 4, 4]
+
+        if st.button("Confirm Payment", key="btn_payment"):
+            # Mark all selected players as paid
+            for i in selected_indices:
+                records.loc[i, ["Paid", "Collection", "Balance"]] = [True, 4, 4]
+
             records.to_excel(excel_file, index=False)
-            st.success(f"✅ Payment marked for {records.loc[selected_index, 'Player Name']} on {records.loc[selected_index, 'Date'].date()}")
-            # Build summary and send Telegram
-            next_sunday = first_sunday
+
+            # Success message
+            marked_names = [unpaid_records.loc[i, "Player Name"] for i in selected_indices]
+            st.success(f"✅ Payment marked for: {', '.join(marked_names)}")
+
+            # Build and send summary
+            today = datetime.date.today()
+            days_until_sunday = (6 - today.weekday()) % 7
+            next_sunday = today + datetime.timedelta(days=days_until_sunday)
+
             court_bookings = records[records["Description"] == "Court booking"] if not records.empty else pd.DataFrame()
             attendance_count = len(records[records["Description"] == "Attendance"]) if not records.empty else 0
             player_names = records[records["Description"] == "Attendance"]["Player Name"].dropna().tolist() if not records.empty else []
+
             summary_message = build_update_message(next_sunday, court_bookings, attendance_count, player_names)
             send_telegram_message(summary_message)
     else:
         st.info("No unpaid players found.")
-
 # --- EXPENSE ---
 elif option == "Expense":
     expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
@@ -254,4 +265,5 @@ balance = total_collection - total_expense
 st.write(f"Total Collection: SGD {total_collection}")
 st.write(f"Total Expense: SGD {total_expense}")
 st.write(f"💰 Current Balance: SGD {balance}")
+
 
