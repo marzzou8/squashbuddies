@@ -146,14 +146,13 @@ elif option == "Mark Payment":
     else:
         st.info("No unpaid players found.")
 # --- EXPENSE ---
-today = datetime.date.today()
-days_until_sunday = (6 - today.weekday()) % 7
-first_sunday = today + datetime.timedelta(days=days_until_sunday)
-next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
-
 elif option == "Expense":
     expense_type = st.radio("Expense type:", ["Court Booking", "Others"])
-    
+    today = datetime.date.today()
+    days_until_sunday = (6 - today.weekday()) % 7
+    first_sunday = today + datetime.timedelta(days=days_until_sunday)
+    next_sundays = [first_sunday + datetime.timedelta(weeks=i) for i in range(4)]
+
     if expense_type == "Court Booking":
         
         booking_date = st.selectbox(
@@ -300,6 +299,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
