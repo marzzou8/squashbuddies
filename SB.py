@@ -15,17 +15,20 @@ from google.oauth2.service_account import Credentials
 TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
 CHAT_ID = st.secrets["CHAT_ID"]
 
-# Authenticate with Google Sheets
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    st.secrets["gcp_service_account"], scope
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=scopes
 )
+
 client = gspread.authorize(creds)
 
-# Open your sheet by name
 sheet = client.open_by_key("15RMyE21x8OmcJ35_lqNEanSVuygB3Khpk2r83BiJ654").sheet1
+
 
 # Load records into DataFrame
 records = pd.DataFrame(sheet.get_all_records())
@@ -343,6 +346,7 @@ st.write(f"💰 Current Balance: SGD {balance}")
 #    ])
 #    records.to_excel(excel_file, index=False)
 #    st.success("✅ Records have been reset. The app is now blank.")
+
 
 
 
