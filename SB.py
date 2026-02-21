@@ -466,11 +466,12 @@ total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
 
 # ✅ Correct balance calculation
-balance = float(df["Balance"].sum()) if not df.empty else 0.0
+balance = total_collection - total_expense
 
 st.write(f"Total Collection: SGD {total_collection:.2f}")
 st.write(f"Total Expense: SGD {total_expense:.2f}")
 st.write(f"✅ Current Balance: SGD {balance:.2f}")
+
 
 
 
