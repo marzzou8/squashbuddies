@@ -228,17 +228,36 @@ def build_update_message(next_sunday, court_bookings_df, attendance_df):
 # -----------------------------
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
 
+
 # Load data
 records = load_records()
 
-# Tabs (clickable list)
-tab_player, tab_payment, tab_expense, tab_remove, tab_dashboard = st.tabs([
-    "👤 Player Attendance",
-    "💰 Mark Payment",
-    "📉 Expense",
-    "❌ Remove Booking",
-    "📊 Dashboard"
-])
+st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
+
+# ---- Simple page state ----
+if "page" not in st.session_state:
+    st.session_state.page = "player"
+
+# ---- Action buttons ----
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    if st.button("👤 Player"):
+        st.session_state.page = "player"
+
+with col2:
+    if st.button("💰 Mark Payment"):
+        st.session_state.page = "payment"
+
+with col3:
+    if st.button("📉 Expense"):
+        st.session_state.page = "expense"
+
+with col4:
+    if st.button("❌ Remove Booking"):
+        st.session_state.page = "remove"
+
+st.divider()
 
 next_sundays = get_next_sundays(4)
 next_sunday = next_sundays[0]
@@ -533,6 +552,7 @@ with tab_dashboard:
 
     with st.expander("Show raw records"):
         st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
