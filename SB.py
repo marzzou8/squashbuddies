@@ -502,8 +502,8 @@ st.write(f"{len(names)} player(s)")
 for n in names:
     st.write(f"- {n}")
 
-st.markdow("### Court share @$4
-Cash or playnow/paylah to      97333133")
+st.markdown("### Court share @$4")
+st.markdown("Cash or playnow/paylah to      97333133")
 st.markdown("### 💰 Our Funds")
 total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
@@ -515,6 +515,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
