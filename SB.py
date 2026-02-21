@@ -390,7 +390,7 @@ elif st.session_state.page == "payment":
                     f"✅ Payment updated. Auto‑booked next Sunday ({next_week_date.strftime('%d %b %y')}): "
                     + ", ".join(auto_added_names)
                 )
-             else:
+            else:
                 st.success("✅ Payment updated. (No new auto‑booking needed — already booked.)")
             # Send Telegram for next Sunday (so group sees the new booking list)
             send_dashboard_telegram(next_week_date)
@@ -554,6 +554,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 with st.expander("Show raw records"):
     st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
