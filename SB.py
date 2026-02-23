@@ -371,12 +371,13 @@ if st.session_state.page == "player":
 elif st.session_state.page == "payment":
     st.subheader("💰 Mark Payment (Organizer)")
 
+    available_dates = sorted(df["Date"].dropna().unique())
     pay_date = st.selectbox(
-        "Select Sunday to mark payments for",
-        next_sundays,
-        index=0,
+        "Select date to mark payments for",
+        available_dates,
         format_func=lambda d: d.strftime("%d %b %y")
     )
+
 
     unpaid = df[
         (df["Description"].str.lower() == "attendance") &
@@ -610,6 +611,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 #with st.expander("Show raw records"):
 #    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
