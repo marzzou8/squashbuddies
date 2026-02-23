@@ -290,26 +290,24 @@ if "page" not in st.session_state:
     st.session_state.page = "player"
 
 # Top buttons
-c1, c2, c3, c4, c5 = st.columns([1, 1.2, 1, 1.2, 1.2])
+page = st.radio(
+    "Navigation",
+    ["👤 Player", "❌ Remove Booking", "💰 Mark Payment", "📉 Expense", "🔄 Refresh"],
+    horizontal=True
+)
 
-with c1:
-    if st.button("👤 Player"):
-        st.session_state.page = "player"
-with c2:
-    if st.button("❌ Remove Booking"):
-        st.session_state.page = "remove"
-with c3:
-    if st.button("💰 Mark Payment"):
-        st.session_state.page = "payment"
-with c4:
-    if st.button("📉 Expense"):
-        st.session_state.page = "expense"
-with c5:
-    if st.button("🔄 Refresh"):
-        # Clear cache and rerun so dashboard reflects manual Google Sheet edits
-        st.cache_data.clear()
-        bust_cache()
-        st.rerun()
+if page == "👤 Player":
+    st.session_state.page = "player"
+elif page == "❌ Remove Booking":
+    st.session_state.page = "remove"
+elif page == "💰 Mark Payment":
+    st.session_state.page = "payment"
+elif page == "📉 Expense":
+    st.session_state.page = "expense"
+elif page == "🔄 Refresh":
+    st.cache_data.clear()
+    bust_cache()
+    st.rerun()
 
 st.divider()
 
@@ -524,10 +522,10 @@ elif st.session_state.page == "expense":
 elif st.session_state.page == "remove":
     st.subheader("❌ Remove Booking")
 
+    available_dates = sorted(df["Date"].dropna().unique())
     remove_date = st.selectbox(
-        "Select Sunday",
-        next_sundays,
-        index=0,
+        "Select date",
+        available_dates,
         format_func=lambda d: d.strftime("%d %b %y")
     )
 
@@ -611,6 +609,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 #with st.expander("Show raw records"):
 #    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
