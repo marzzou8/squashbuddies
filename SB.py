@@ -9,7 +9,6 @@ import pandas as pd
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-import schedule
 import time
 import threading
 import pytz
@@ -233,29 +232,39 @@ def next_sunday_of(d: datetime.date) -> datetime.date:
 # -----------------------------
 # REMINDER FUNCTION
 # -----------------------------
-def send_unpaid_reminder():
-    df = load_records()
-    # Find next Sunday
-    next_sundays = get_next_sundays(1)
-    target_date = next_sundays[0]
+def send_unpaid_reminder(request=None):
+    creds = Credentials.from_service_account_file("service.json", scopes=SCOPES)
+    gc = gspread.authorize(creds)
+    worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+
+    values = worksheet.get_all_values()
+    df = pd.DataFrame(values[1:], columns=values[0])
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.date
+    df["Paid"] = df["Paid"].str.lower().isin(["true", "1", "yes"])
+
+    # Next Sunday
+    today = datetime.date.today()
+    days_until_sunday = (6 - today.weekday()) % 7
+    next_sunday = today + datetime.timedelta(days=days_until_sunday)
 
     unpaid = df[
         (df["Description"].str.lower() == "attendance") &
-        (df["Date"] == target_date) &
-        (df["Paid"] == False) &
-        (df["Player Name"].str.strip() != "")
+        (df["Date"] == next_sunday) &
+        (df["Paid"] == False)
     ]
 
     if unpaid.empty:
-        message = f"📅 {target_date.strftime('%d %b %Y')}\nNo unpaid players 🎉"
+        message = f"📅 {next_sunday.strftime('%d %b %Y')}\nNo unpaid players 🎉"
     else:
         names = sorted(unpaid["Player Name"].tolist())
-        message = f"📅 {target_date.strftime('%d %b %Y')}\nUnpaid players:\n"
+        message = f"📅 {next_sunday.strftime('%d %b %Y')}\nUnpaid players:\n"
         for n in names:
             message += f" - {n}\n"
         message += "\nPlease settle your $4 court share."
 
     send_telegram_message(message)
+    return "Reminder sent"
+
 
 # -----------------------------
 # SCHEDULER THREAD
@@ -601,6 +610,7 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 #with st.expander("Show raw records"):
 #    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
