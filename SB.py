@@ -9,6 +9,10 @@ import pandas as pd
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
+import schedule
+import time
+import threading
+import pytz
 
 
 # -----------------------------
@@ -224,7 +228,50 @@ def send_dashboard_telegram(target_date: datetime.date):
 def next_sunday_of(d: datetime.date) -> datetime.date:
     # If d is already a Sunday, next Sunday is +7 days
     return d + datetime.timedelta(days=7)
-    
+
+
+# -----------------------------
+# REMINDER FUNCTION
+# -----------------------------
+def send_unpaid_reminder():
+    df = load_records()
+    # Find next Sunday
+    next_sundays = get_next_sundays(1)
+    target_date = next_sundays[0]
+
+    unpaid = df[
+        (df["Description"].str.lower() == "attendance") &
+        (df["Date"] == target_date) &
+        (df["Paid"] == False) &
+        (df["Player Name"].str.strip() != "")
+    ]
+
+    if unpaid.empty:
+        message = f"📅 {target_date.strftime('%d %b %Y')}\nNo unpaid players 🎉"
+    else:
+        names = sorted(unpaid["Player Name"].tolist())
+        message = f"📅 {target_date.strftime('%d %b %Y')}\nUnpaid players:\n"
+        for n in names:
+            message += f" - {n}\n"
+        message += "\nPlease settle your $4 court share."
+
+    send_telegram_message(message)
+
+# -----------------------------
+# SCHEDULER THREAD
+# -----------------------------
+def run_scheduler():
+    tz = pytz.timezone("Asia/Singapore")
+    # Every Tuesday at 09:00 SGT
+    schedule.every().tuesday.at("09:00").do(send_unpaid_reminder)
+
+    while True:
+        schedule.run_pending()
+        time.sleep(30)  # check every 30s
+
+# Start scheduler in background thread
+threading.Thread(target=run_scheduler, daemon=True).start()
+
 # -----------------------------
 # UI STATE (BUTTON NAV)
 # -----------------------------
@@ -552,8 +599,9 @@ st.write(f"Collection: SGD {total_collection:.2f}")
 st.write(f"Expense: SGD {total_expense:.2f}")
 st.write(f"✅ Balance: SGD {balance:.2f}")
 
-with st.expander("Show raw records"):
-    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+#with st.expander("Show raw records"):
+#    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
 
 
 
