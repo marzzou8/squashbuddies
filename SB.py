@@ -20,6 +20,7 @@ EXPECTED_COLUMNS = [
     "Date", "Player Name", "Paid", "Court", "Time Slot",
     "Collection", "Expense", "Balance", "Description"
 ]
+initial_balance = -6
 
 # -----------------------------
 # SECRETS
@@ -128,7 +129,7 @@ def append_record(record: dict):
     """Append a new record row to Google Sheet"""
     collection = float(record.get("Collection", 0) or 0)
     expense = float(record.get("Expense", 0) or 0)
-    record["Balance"] = collection - expense
+    record["Balance"] = initial_balance + collection - expense
 
     row = []
     for col in EXPECTED_COLUMNS:
@@ -704,6 +705,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
