@@ -267,21 +267,6 @@ def send_unpaid_reminder(request=None):
 
 
 # -----------------------------
-# SCHEDULER THREAD
-# -----------------------------
-def run_scheduler():
-    tz = pytz.timezone("Asia/Singapore")
-    # Every Tuesday at 09:00 SGT
-    schedule.every().tuesday.at("09:00").do(send_unpaid_reminder)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(30)  # check every 30s
-
-# Start scheduler in background thread
-threading.Thread(target=run_scheduler, daemon=True).start()
-
-# -----------------------------
 # UI STATE (BUTTON NAV)
 # -----------------------------
 st.title("Squash Buddies @YCK Attendance, Collection & Expenses")
@@ -609,6 +594,32 @@ st.write(f"✅ Balance: SGD {balance:.2f}")
 
 #with st.expander("Show raw records"):
 #    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
+
+# -----------------------------
+# TUESDAY REMINDER CHECK
+# -----------------------------
+def check_tuesday_reminder():
+    """Check if it's Tuesday morning and send reminder if not already sent today"""
+    try:
+        tz = pytz.timezone("Asia/Singapore")
+        now = datetime.datetime.now(tz)
+        
+        # Check if it's Tuesday (weekday() == 1) between 9-11 AM
+        if now.weekday() == 1 and 9 <= now.hour < 11:
+            # Create a unique key for today
+            today_key = f"reminder_sent_{now.strftime('%Y-%m-%d')}"
+            
+            # Check if we already sent reminder today
+            if today_key not in st.session_state:
+                st.info("📨 Checking for unpaid players and sending reminder to Telegram...")
+                send_unpaid_reminder()  # Call your existing reminder function
+                st.session_state[today_key] = True
+                st.success(f"✅ Tuesday reminder sent for {now.strftime('%d %b %Y')}!")
+    except Exception as e:
+        st.error(f"Error in reminder check: {str(e)}")
+
+# Call the reminder check when the app loads
+check_tuesday_reminder()
 
 
 
