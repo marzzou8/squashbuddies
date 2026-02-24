@@ -592,6 +592,46 @@ st.write(f"Collection: SGD {total_collection:.2f}")
 st.write(f"Expense: SGD {total_expense:.2f}")
 st.write(f"✅ Balance: SGD {balance:.2f}")
 
+# Add this somewhere in your UI, perhaps after the dashboard section
+st.divider()
+with st.expander("🔧 Test Tools (Remove after testing)"):
+    st.subheader("Test Reminder")
+    if st.button("📨 Test Send Unpaid Reminder NOW"):
+        with st.spinner("Sending reminder..."):
+            result = send_unpaid_reminder()
+            if result:
+                st.success("✅ Test reminder sent! Check Telegram.")
+            else:
+                st.error("❌ Failed to send reminder. Check the error.")
+    
+    # Optional: Force test for a specific date
+    st.subheader("Test with Different Date")
+    test_date = st.date_input("Test date for unpaid check", value=datetime.date.today())
+    if st.button("Test with selected date"):
+        # Temporarily modify the function to use test date
+        def test_reminder_with_date():
+            try:
+                # Your existing send_unpaid_reminder logic but with test date
+                df = load_records()
+                unpaid = df[
+                    (df["Description"].str.lower().str.strip() == "attendance") &
+                    (df["Date"] == test_date) &
+                    (df["Paid"] == False) &
+                    (df["Player Name"].str.strip() != "")
+                ]
+                
+                if unpaid.empty:
+                    st.info(f"No unpaid players for {test_date}")
+                else:
+                    names = sorted(unpaid["Player Name"].tolist())
+                    st.write(f"Unpaid players for {test_date}:")
+                    for n in names:
+                        st.write(f"• {n}")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+        
+        test_reminder_with_date()
+
 #with st.expander("Show raw records"):
 #    st.dataframe(df.drop(columns=["_row"], errors="ignore"), use_container_width=True)
 
@@ -620,6 +660,7 @@ def check_tuesday_reminder():
 
 # Call the reminder check when the app loads
 check_tuesday_reminder()
+
 
 
 
