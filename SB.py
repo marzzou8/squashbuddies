@@ -213,8 +213,11 @@ def next_sunday_of(d: datetime.date) -> datetime.date:
 # -----------------------------
 # REMINDER FUNCTION (Based on Google Sheet dates)
 # -----------------------------
+# -----------------------------
+# REMINDER FUNCTION (Based on Google Sheet dates - PREVIOUS SUNDAY with attendance)
+# -----------------------------
 def send_unpaid_reminder():
-    """Send reminder for unpaid players from the most recent Sunday in the sheet"""
+    """Send reminder for unpaid players from the PREVIOUS Sunday that had attendance"""
     try:
         # Load fresh data
         creds = Credentials.from_service_account_info(
@@ -232,33 +235,46 @@ def send_unpaid_reminder():
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.date
         df["Paid"] = df["Paid"].str.lower().isin(["true", "1", "yes", "y"])
         
-        # Get all unique dates with attendance records
-        attendance_dates = df[
+        # Get today's date
+        today = datetime.date.today()
+        
+        # Calculate the most recent Sunday that has passed
+        days_since_sunday = (today.weekday() + 1) % 7
+        last_sunday_calendar = today - datetime.timedelta(days=days_since_sunday)
+        
+        # Get all Sundays that have attendance records
+        attendance_sundays = df[
             (df["Description"].str.lower().str.strip() == "attendance") &
             (df["Player Name"].str.strip() != "")
         ]["Date"].dropna().unique()
         
-        if len(attendance_dates) == 0:
-            send_telegram_message("No attendance records found in the sheet.")
+        # Filter to only Sundays that are on or before last Sunday
+        past_sundays = [d for d in attendance_sundays if d <= last_sunday_calendar]
+        
+        if not past_sundays:
+            # No past Sundays with attendance
+            message = "No attendance records found from previous Sundays."
+            send_telegram_message(message)
             return False
         
         # Get the most recent Sunday with attendance
-        recent_dates = sorted(attendance_dates, reverse=True)
-        last_sunday = recent_dates[0]
+        last_sunday_with_attendance = sorted(past_sundays, reverse=True)[0]
+        
+        st.info(f"Most recent Sunday with attendance: {last_sunday_with_attendance}")
 
         # Find unpaid players for that Sunday
         unpaid = df[
             (df["Description"].str.lower().str.strip() == "attendance") &
-            (df["Date"] == last_sunday) &
+            (df["Date"] == last_sunday_with_attendance) &
             (df["Paid"] == False) &
             (df["Player Name"].str.strip() != "")
         ]
 
         if unpaid.empty:
-            message = f"📅 {last_sunday.strftime('%d %b %Y')}\n✅ All players have paid! No reminders needed."
+            message = f"📅 {last_sunday_with_attendance.strftime('%d %b %Y')}\n✅ All players have paid! No reminders needed."
         else:
             names = sorted(unpaid["Player Name"].tolist())
-            message = f"📅 {last_sunday.strftime('%d %b %Y')}\n⚠️ Unpaid players (please settle $4):\n"
+            message = f"📅 {last_sunday_with_attendance.strftime('%d %b %Y')}\n⚠️ Unpaid players (please settle $4):\n"
             for n in names:
                 message += f"• {n}\n"
             message += "\n💳 PayNow/PayLah to 97333133"
@@ -269,7 +285,6 @@ def send_unpaid_reminder():
     except Exception as e:
         print(f"Error in reminder: {str(e)}")
         return False
-
 # -----------------------------
 # UI STATE
 # -----------------------------
@@ -642,6 +657,9 @@ with st.expander("🧪 Test Tools (For Admin Only)"):
 # -----------------------------
 # TUESDAY REMINDER CHECK (Auto-run on app load)
 # -----------------------------
+# -----------------------------
+# TUESDAY REMINDER CHECK (Auto-run on app load)
+# -----------------------------
 def check_tuesday_reminder():
     """Check if it's Tuesday morning and send reminder if needed"""
     try:
@@ -653,15 +671,19 @@ def check_tuesday_reminder():
             today_key = f"reminder_sent_{now.strftime('%Y-%m-%d')}"
             
             if today_key not in st.session_state:
-                with st.spinner("📨 Sending Tuesday reminder..."):
-                    send_unpaid_reminder()
-                    st.session_state[today_key] = True
-                    st.success(f"✅ Tuesday reminder sent for {now.strftime('%d %b %Y')}!")
+                with st.spinner("📨 Sending Tuesday reminder for last Sunday's game..."):
+                    result = send_unpaid_reminder()
+                    if result:
+                        st.session_state[today_key] = True
+                        st.success(f"✅ Tuesday reminder sent for last Sunday's game!")
+                    else:
+                        st.warning("No reminder sent - no past Sunday games found.")
     except Exception as e:
         st.error(f"Error in reminder check: {str(e)}")
-
+        
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
