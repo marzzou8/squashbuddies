@@ -189,7 +189,7 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
 
     total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
     total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
-    balance = total_collection - total_expense
+    balance = initial_balance + total_collection - total_expense
 
     lines.append("")
     lines.append("Court share @$4")
@@ -649,7 +649,7 @@ st.caption("Court share @$4 | PayNow/PayLah to 97333133")
 
 total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
-balance = total_collection - total_expense
+balance = initial_balance + total_collection - total_expense
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Collection", f"SGD {total_collection:.2f}")
@@ -705,6 +705,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
