@@ -638,28 +638,61 @@ with st.expander("🔧 Test Tools (Remove after testing)"):
 # -----------------------------
 # TUESDAY REMINDER CHECK
 # -----------------------------
-def check_tuesday_reminder():
-    """Check if it's Tuesday morning and send reminder if not already sent today"""
+def send_unpaid_reminder():
+    """Send reminder for unpaid players from the most recent Sunday in the sheet"""
     try:
-        tz = pytz.timezone("Asia/Singapore")
-        now = datetime.datetime.now(tz)
-        
-        # Check if it's Tuesday (weekday() == 1) between 9-11 AM
-        if now.weekday() == 1 and 9 <= now.hour < 11:
-            # Create a unique key for today
-            today_key = f"reminder_sent_{now.strftime('%Y-%m-%d')}"
-            
-            # Check if we already sent reminder today
-            if today_key not in st.session_state:
-                st.info("📨 Checking for unpaid players and sending reminder to Telegram...")
-                send_unpaid_reminder()  # Call your existing reminder function
-                st.session_state[today_key] = True
-                st.success(f"✅ Tuesday reminder sent for {now.strftime('%d %b %Y')}!")
-    except Exception as e:
-        st.error(f"Error in reminder check: {str(e)}")
+        # Load fresh data
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"],
+            scopes=SCOPES
+        )
+        gc = gspread.authorize(creds)
+        worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
 
-# Call the reminder check when the app loads
-check_tuesday_reminder()
+        values = worksheet.get_all_values()
+        if len(values) <= 1:
+            return False
+            
+        df = pd.DataFrame(values[1:], columns=values[0])
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.date
+        df["Paid"] = df["Paid"].str.lower().isin(["true", "1", "yes", "y"])
+        
+        # Get the most recent Sunday with attendance records
+        attendance_dates = df[
+            (df["Description"].str.lower().str.strip() == "attendance") &
+            (df["Player Name"].str.strip() != "")
+        ]["Date"].dropna().unique()
+        
+        if len(attendance_dates) == 0:
+            return False
+        
+        # Sort dates and get the most recent one
+        recent_dates = sorted(attendance_dates, reverse=True)
+        last_sunday = recent_dates[0]
+
+        # Find unpaid players for that Sunday
+        unpaid = df[
+            (df["Description"].str.lower().str.strip() == "attendance") &
+            (df["Date"] == last_sunday) &
+            (df["Paid"] == False) &
+            (df["Player Name"].str.strip() != "")
+        ]
+
+        if unpaid.empty:
+            message = f"📅 {last_sunday.strftime('%d %b %Y')}\n✅ All players have paid! No reminders needed."
+        else:
+            names = sorted(unpaid["Player Name"].tolist())
+            message = f"📅 {last_sunday.strftime('%d %b %Y')}\n⚠️ Unpaid players (please settle $4):\n"
+            for n in names:
+                message += f"• {n}\n"
+            message += "\n💳 PayNow/PayLah to 97333133"
+
+        send_telegram_message(message)
+        return True
+        
+    except Exception as e:
+        print(f"Error in reminder: {str(e)}")
+        return False
 
 
 
