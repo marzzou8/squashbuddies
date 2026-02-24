@@ -277,7 +277,7 @@ def send_unpaid_reminder():
             message = f"📅 {last_sunday_with_attendance.strftime('%d %b %Y')}\n⚠️ Unpaid players (please settle $4):\n"
             for n in names:
                 message += f"• {n}\n"
-            message += "\n💳 PayNow/PayLah to 97333133"
+            message += "\n💳 PayNow/PayLah to 97333133 \nIf you have paid please go to https://tinyurl.com/SquashYCK and update Mark Payment"
 
         send_telegram_message(message)
         return True
@@ -683,6 +683,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
