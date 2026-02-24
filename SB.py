@@ -579,57 +579,81 @@ elif st.session_state.page == "remove":
 # -----------------------------
 # DASHBOARD (Based on Sheet Dates)
 # -----------------------------
+# -----------------------------
+# DASHBOARD (Shows Coming Sunday by default)
+# -----------------------------
 st.divider()
 st.subheader("📊 Dashboard")
 
-# Get all dates from sheet
+# Get next Sunday
+next_sunday = get_next_sundays(1)[0]
+
+# Date selector with Coming Sunday as default
 all_dates = df["Date"].dropna().unique()
 all_dates_sorted = sorted(all_dates, reverse=True)
 
-if not all_dates_sorted:
-    st.info("No data available yet.")
-    dash_date = next_sundays[0]
-else:
-    dash_date = st.selectbox(
-        "Dashboard Sunday",
-        all_dates_sorted,
-        index=0,  # Most recent first
-        format_func=lambda d: d.strftime("%d %b %y"),
-        key="dashboard_date"
-    )
+view_date = st.radio(
+    "View",
+    ["🔜 Coming Sunday", "📅 Past Sunday"],
+    horizontal=True
+)
 
-# Display dashboard
-sunday_df = df[df["Date"] == dash_date]
+if view_date == "🔜 Coming Sunday":
+    selected_date = next_sunday
+    st.markdown(f"### 🔜 {selected_date.strftime('%d %b %Y')}")
+else:
+    if all_dates_sorted:
+        selected_date = st.selectbox(
+            "Select past Sunday",
+            all_dates_sorted,
+            format_func=lambda d: d.strftime('%d %b %y')
+        )
+        st.markdown(f"### 📅 {selected_date.strftime('%d %b %Y')}")
+    else:
+        st.info("No past Sundays yet")
+        selected_date = next_sunday
+
+# Display data for selected date
+sunday_df = df[df["Date"] == selected_date]
 attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"]
 court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
 
-st.markdown(f"### 📅 {dash_date.strftime('%d %b %Y')}")
-
-st.markdown("### 📋 Court bookings")
+# Court Bookings
+st.markdown("### 📋 Court Bookings")
 if court_df.empty:
     st.write("None")
 else:
     for _, r in court_df.iterrows():
         court = int(r["Court"]) if pd.notna(r["Court"]) else ""
-        st.write(f"- Court {court} | {r['Time Slot']}")
+        st.write(f"Court {court} | {r['Time Slot']}")
 
+# Attendance
 st.markdown("### 👥 Attendance")
 names = sorted([n for n in attendance_df["Player Name"].dropna().tolist() if str(n).strip()])
-st.write(f"{len(names)} player(s)")
-for n in names:
-    st.write(f"- {n}")
 
-st.markdown("### Court share @$4")
-st.markdown("Cash or playnow/paylah to 97333133")
+if selected_date == next_sunday:
+    st.write(f"**{len(names)} player(s) signed up**")
+    for n in names:
+        st.write(f"• {n}")
+else:
+    st.write(f"**{len(names)} player(s)**")
+    for n in names:
+        player_row = attendance_df[attendance_df["Player Name"] == n]
+        paid = "✅" if not player_row.empty and player_row.iloc[0]["Paid"] else "❌"
+        st.write(f"{paid} {n}")
+
+# Fund Summary
 st.markdown("### 💰 Our Funds")
+st.caption("Court share @$4 | PayNow/PayLah to 97333133")
+
 total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
 balance = total_collection - total_expense
 
-st.write(f"Collection: SGD {total_collection:.2f}")
-st.write(f"Expense: SGD {total_expense:.2f}")
-st.write(f"✅ Balance: SGD {balance:.2f}")
-
+col1, col2, col3 = st.columns(3)
+col1.metric("Collection", f"SGD {total_collection:.2f}")
+col2.metric("Expense", f"SGD {total_expense:.2f}")
+col3.metric("Balance", f"SGD {balance:.2f}")
 # -----------------------------
 # TEST BUTTONS (For debugging)
 # -----------------------------
@@ -657,9 +681,6 @@ with st.expander("🧪 Test Tools (For Admin Only)"):
 # -----------------------------
 # TUESDAY REMINDER CHECK (Auto-run on app load)
 # -----------------------------
-# -----------------------------
-# TUESDAY REMINDER CHECK (Auto-run on app load)
-# -----------------------------
 def check_tuesday_reminder():
     """Check if it's Tuesday morning and send reminder if needed"""
     try:
@@ -683,6 +704,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
