@@ -644,17 +644,17 @@ else:
         st.write(f"{paid} {n}")
 
 # Fund Summary
-st.markdown("### 💰 Our Funds")
-st.caption("Court share @$4 | PayNow/PayLah to 97333133")
+#st.markdown("### 💰 Our Funds")
+st.caption("Court share @$4 | PayNow/PayLah to Seah 97333133")
 
 total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
 total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
 balance = initial_balance + total_collection - total_expense
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Collection", f"SGD {total_collection:.2f}")
-col2.metric("Expense", f"SGD {total_expense:.2f}")
-col3.metric("Balance", f"SGD {balance:.2f}")
+#col1, col2, col3 = st.columns(3)
+#col1.metric("Collection", f"SGD {total_collection:.2f}")
+#col2.metric("Expense", f"SGD {total_expense:.2f}")
+#col3.metric("Balance", f"SGD {balance:.2f}")
 # -----------------------------
 # TEST BUTTONS (For debugging)
 # -----------------------------
@@ -705,6 +705,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
