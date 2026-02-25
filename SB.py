@@ -194,10 +194,10 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
     lines.append("")
     lines.append("Court share @$4")
     lines.append("Cash or playnow/paylah to 97333133")
-    lines.append("💰 Our Fund:")
-    lines.append(f" Collection: SGD {total_collection:.2f}")
-    lines.append(f" Expense: SGD {total_expense:.2f}")
-    lines.append(f" Balance: SGD {balance:.2f}")
+#    lines.append("💰 Our Fund:")
+#    lines.append(f" Collection: SGD {total_collection:.2f}")
+#    lines.append(f" Expense: SGD {total_expense:.2f}")
+#    lines.append(f" Balance: SGD {balance:.2f}")
 
     return "\n".join(lines)
 
@@ -705,6 +705,7 @@ def check_tuesday_reminder():
         
 # Run the Tuesday check
 check_tuesday_reminder()
+
 
 
 
