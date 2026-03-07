@@ -647,7 +647,16 @@ else:
 
 # Display data for selected date
 sunday_df = df[df["Date"] == selected_date]
-attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"]
+
+attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"].copy()
+
+# SORT PLAYERS: unpaid first, then alphabetical
+attendance_df = attendance_df.sort_values(
+    by=["Paid", "Player Name"],
+    ascending=[True, True],
+    key=lambda col: col.str.lower() if col.name == "Player Name" else col
+)
+
 court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
 
 # Court Bookings
@@ -811,6 +820,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
