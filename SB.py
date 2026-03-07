@@ -659,7 +659,7 @@ else:
 
         icon = "✅" if paid else "❌"
 
-        c1, c2, c3 = st.columns([8,1,1], gap="small")
+        c1, c2, c3 = st.columns([5,1,1], gap="small")
 
         # Player name
         with c1:
@@ -783,6 +783,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
