@@ -659,16 +659,18 @@ else:
 
         icon = "✅" if paid else "❌"
 
-        c1, c2, c3 = st.columns([2,1,1], gap="small")
+        c1, c2, c3 = st.columns([8,1,1], gap="small")
 
         # Player name
         with c1:
-            st.write(f"{icon} {name}")
+            st.markdown(f"{icon} **{name}**")
 
-        # Mark paid
+        # Mark payment
         with c2:
+
             if not paid:
-                if st.button("💰", key=f"pay_{rownum}"):
+
+                if st.button("[💰]", key=f"pay_{rownum}"):
 
                     update_row_cells(rownum, {
                         "Paid": True,
@@ -705,7 +707,8 @@ else:
 
         # Remove booking
         with c3:
-            if st.button("🚫", key=f"remove_{rownum}"):
+
+            if st.button("[🚫]", key=f"remove_{rownum}"):
 
                 delete_sheet_rows([rownum])
 
@@ -783,6 +786,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
