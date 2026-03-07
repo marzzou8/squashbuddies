@@ -217,9 +217,6 @@ def next_sunday_of(d: datetime.date) -> datetime.date:
     return d + datetime.timedelta(days=7)
 
 # -----------------------------
-# REMINDER FUNCTION (Based on Google Sheet dates)
-# -----------------------------
-# -----------------------------
 # REMINDER FUNCTION (Based on Google Sheet dates - PREVIOUS SUNDAY with attendance)
 # -----------------------------
 def send_unpaid_reminder():
@@ -592,9 +589,16 @@ st.subheader("📊 Dashboard")
 next_sunday = get_next_sundays(1)[0]
 
 # Date selector with Coming Sunday as default
-all_dates = df["Date"].dropna().unique()
-all_dates_sorted = sorted(all_dates, reverse=True)
+today = datetime.date.today()
 
+# Only Sundays before today
+past_sundays = df[
+    (df["Date"].notna()) &
+    (df["Date"] < today) &
+    (pd.to_datetime(df["Date"]).dt.weekday == 6)
+]["Date"].unique()
+
+all_dates_sorted = sorted(past_sundays, reverse=True)
 view_date = st.radio(
     "View",
     ["🔜 Coming Sunday", "📅 Past Sunday"],
@@ -637,6 +641,7 @@ players = attendance_df.copy()
 
 if players.empty:
     st.write("No players yet")
+
 else:
 
     players = players.sort_values("Paid")
@@ -647,19 +652,20 @@ else:
         paid = r["Paid"]
         rownum = int(r["_row"])
 
-        col1, col2 = st.columns([6,1])
+        col1, col2, col3 = st.columns([6,1,1])
 
+        # Player name + paid status
         with col1:
             icon = "✅" if paid else "❌"
             st.write(f"{icon} {name}")
 
+        # Mark payment button
         with col2:
 
             if not paid:
 
                 if st.button("💰", key=f"pay_{rownum}"):
 
-                    # mark paid
                     update_row_cells(rownum, {
                         "Paid": True,
                         "Collection": DEFAULT_FEE,
@@ -697,6 +703,21 @@ else:
                     st.success(f"{name} marked paid")
 
                     st.rerun()
+
+        # Remove booking button
+        with col3:
+
+            if st.button("🚫", key=f"remove_{rownum}"):
+
+                delete_sheet_rows([rownum])
+
+                bust_cache()
+
+                send_dashboard_telegram(selected_date)
+
+                st.success(f"{name} removed")
+
+                st.rerun()
 
 # Fund Summary
 #st.markdown("### 💰 Our Funds")
@@ -768,6 +789,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
