@@ -649,6 +649,7 @@ if players.empty:
 
 else:
 
+    # show unpaid first
     players = players.sort_values("Paid")
 
     for _, r in players.iterrows():
@@ -657,19 +658,25 @@ else:
         paid = r["Paid"]
         rownum = int(r["_row"])
 
-        col1, col2, col3 = st.columns([6,1,1])
+        # mobile friendly layout
+        col1, col2 = st.columns([4,2], gap="small")
 
-        # Player name + paid status
         with col1:
-            icon = "✅" if paid else "❌"
-            st.write(f"{icon} {name}")
 
-        # Mark payment button
+            icon = "✅" if paid else "❌"
+
+            st.markdown(f"**{icon} {name}**")
+
         with col2:
 
+            b1, b2 = st.columns(2, gap="small")
+
+            # --------------------
+            # MARK PAYMENT
+            # --------------------
             if not paid:
 
-                if st.button("💰", key=f"pay_{rownum}"):
+                if b1.button("💰", key=f"pay_{rownum}"):
 
                     update_row_cells(rownum, {
                         "Paid": True,
@@ -677,7 +684,7 @@ else:
                         "Balance": DEFAULT_FEE
                     })
 
-                    # auto book next Sunday
+                    # auto add next Sunday
                     next_week_date = next_sunday_of(selected_date)
 
                     latest_df = load_records()
@@ -709,10 +716,10 @@ else:
 
                     st.rerun()
 
-        # Remove booking button
-        with col3:
-
-            if st.button("🚫", key=f"remove_{rownum}"):
+            # --------------------
+            # REMOVE BOOKING
+            # --------------------
+            if b2.button("🚫", key=f"remove_{rownum}"):
 
                 delete_sheet_rows([rownum])
 
@@ -794,6 +801,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
