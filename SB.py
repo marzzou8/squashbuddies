@@ -649,7 +649,7 @@ if players.empty:
 
 else:
 
-    # show unpaid first
+    # unpaid first
     players = players.sort_values("Paid")
 
     for _, r in players.iterrows():
@@ -658,25 +658,25 @@ else:
         paid = r["Paid"]
         rownum = int(r["_row"])
 
-        # mobile friendly layout
-        col1, col2 = st.columns([4,2], gap="small")
+        icon = "✅" if paid else "❌"
 
-        with col1:
+        # row container
+        c1, c2, c3 = st.columns([7,1,1], gap="small")
 
-            icon = "✅" if paid else "❌"
+        # ----------------
+        # PLAYER NAME
+        # ----------------
+        with c1:
+            st.markdown(f"{icon} **{name}**")
 
-            st.markdown(f"**{icon} {name}**")
+        # ----------------
+        # MARK PAYMENT
+        # ----------------
+        with c2:
 
-        with col2:
-
-            b1, b2 = st.columns(2, gap="small")
-
-            # --------------------
-            # MARK PAYMENT
-            # --------------------
             if not paid:
 
-                if b1.button("💰", key=f"pay_{rownum}"):
+                if st.button("💰", key=f"pay_{rownum}"):
 
                     update_row_cells(rownum, {
                         "Paid": True,
@@ -684,11 +684,11 @@ else:
                         "Balance": DEFAULT_FEE
                     })
 
-                    # auto add next Sunday
                     next_week_date = next_sunday_of(selected_date)
 
                     latest_df = load_records()
 
+                    # check duplicate booking
                     already_booked = not latest_df[
                         (latest_df["Description"].str.lower() == "attendance") &
                         (latest_df["Date"] == next_week_date) &
@@ -712,22 +712,20 @@ else:
 
                     send_dashboard_telegram(next_week_date)
 
-                    st.success(f"{name} marked paid")
-
                     st.rerun()
 
-            # --------------------
-            # REMOVE BOOKING
-            # --------------------
-            if b2.button("🚫", key=f"remove_{rownum}"):
+        # ----------------
+        # REMOVE BOOKING
+        # ----------------
+        with c3:
+
+            if st.button("🚫", key=f"remove_{rownum}"):
 
                 delete_sheet_rows([rownum])
 
                 bust_cache()
 
                 send_dashboard_telegram(selected_date)
-
-                st.success(f"{name} removed")
 
                 st.rerun()
 
@@ -801,6 +799,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
