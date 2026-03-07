@@ -182,10 +182,14 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
             court = int(r["Court"]) if pd.notna(r["Court"]) else ""
             lines.append(f" - Court {court} | {r['Time Slot']}")
 
-    names = sorted([n for n in attendance_df["Player Name"].dropna().tolist() if str(n).strip()])
-    lines.append(f"👥 Attendance: {len(names)}")
-    for n in names:
-        lines.append(f" - {n}")
+    attendance_df = attendance_df.sort_values("Paid")
+
+    lines.append(f"👥 Attendance: {len(attendance_df)}")
+
+    for _, r in attendance_df.iterrows():
+        paid = "✅" if r["Paid"] else "❌"
+        name = r["Player Name"]
+        lines.append(f"{paid} {name}")
 
     total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
     total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
@@ -579,9 +583,6 @@ elif st.session_state.page == "remove":
                     st.rerun()
 
 # -----------------------------
-# DASHBOARD (Based on Sheet Dates)
-# -----------------------------
-# -----------------------------
 # DASHBOARD (Shows Coming Sunday by default)
 # -----------------------------
 st.divider()
@@ -631,18 +632,71 @@ else:
 
 # Attendance
 st.markdown("### 👥 Attendance")
-names = sorted([n for n in attendance_df["Player Name"].dropna().tolist() if str(n).strip()])
 
-if selected_date == next_sunday:
-    st.write(f"**{len(names)} player(s) signed up**")
-    for n in names:
-        st.write(f"• {n}")
+players = attendance_df.copy()
+
+if players.empty:
+    st.write("No players yet")
 else:
-    st.write(f"**{len(names)} player(s)**")
-    for n in names:
-        player_row = attendance_df[attendance_df["Player Name"] == n]
-        paid = "✅" if not player_row.empty and player_row.iloc[0]["Paid"] else "❌"
-        st.write(f"{paid} {n}")
+
+    players = players.sort_values("Paid")
+
+    for _, r in players.iterrows():
+
+        name = r["Player Name"]
+        paid = r["Paid"]
+        rownum = int(r["_row"])
+
+        col1, col2 = st.columns([6,1])
+
+        with col1:
+            icon = "✅" if paid else "❌"
+            st.write(f"{icon} {name}")
+
+        with col2:
+
+            if not paid:
+
+                if st.button("💰", key=f"pay_{rownum}"):
+
+                    # mark paid
+                    update_row_cells(rownum, {
+                        "Paid": True,
+                        "Collection": DEFAULT_FEE,
+                        "Balance": DEFAULT_FEE
+                    })
+
+                    # auto book next Sunday
+                    next_week_date = next_sunday_of(selected_date)
+
+                    latest_df = load_records()
+
+                    already_booked = not latest_df[
+                        (latest_df["Description"].str.lower() == "attendance") &
+                        (latest_df["Date"] == next_week_date) &
+                        (latest_df["Player Name"].str.lower() == name.lower())
+                    ].empty
+
+                    if not already_booked:
+
+                        append_record({
+                            "Date": next_week_date,
+                            "Player Name": name,
+                            "Paid": False,
+                            "Court": "",
+                            "Time Slot": DEFAULT_TIME_SLOT,
+                            "Collection": 0,
+                            "Expense": 0,
+                            "Description": "Attendance",
+                        })
+
+                    bust_cache()
+
+                    send_dashboard_telegram(next_week_date)
+
+                    st.success(f"{name} marked paid")
+
+                    st.rerun()
 
 # Fund Summary
 #st.markdown("### 💰 Our Funds")
@@ -681,30 +735,38 @@ with st.expander("🧪 Test Tools (For Admin Only)"):
             st.success("Test message sent! Check Telegram.")
 
 # -----------------------------
-# TUESDAY REMINDER CHECK (Auto-run on app load)
+# TUESDAY REMINDER CHECK (Simple & Reliable-chatgpt)
 # -----------------------------
 def check_tuesday_reminder():
-    """Check if it's Tuesday morning and send reminder if needed"""
     try:
         tz = pytz.timezone("Asia/Singapore")
         now = datetime.datetime.now(tz)
-        
-        # Tuesday between 9-11 AM
-        if now.weekday() == 1 and 9 <= now.hour < 11:
-            today_key = f"reminder_sent_{now.strftime('%Y-%m-%d')}"
-            
-            if today_key not in st.session_state:
-                with st.spinner("📨 Sending Tuesday reminder for last Sunday's game..."):
-                    result = send_unpaid_reminder()
-                    if result:
-                        st.session_state[today_key] = True
-                        st.success(f"✅ Tuesday reminder sent for last Sunday's game!")
-                    else:
-                        st.warning("No reminder sent - no past Sunday games found.")
+
+        # Only run on Tuesday
+        if now.weekday() != 1:
+            return
+
+        # File flag to prevent duplicate reminders
+        flag_file = f"reminder_sent_{now.strftime('%Y%m%d')}.txt"
+
+        import os
+        if os.path.exists(flag_file):
+            return  # reminder already sent today
+
+        with st.spinner("📨 Sending Tuesday reminder..."):
+            result = send_unpaid_reminder()
+
+            if result:
+                open(flag_file, "w").close()
+                st.success("✅ Tuesday reminder sent!")
+            else:
+                st.info("No unpaid players found.")
+
     except Exception as e:
-        st.error(f"Error in reminder check: {str(e)}")
-        
-# Run the Tuesday check
+        st.error(f"Reminder error: {str(e)}")
+
+
+# Run automatically when app loads
 check_tuesday_reminder()
 
 
