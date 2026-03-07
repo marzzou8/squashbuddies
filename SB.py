@@ -166,58 +166,55 @@ def delete_sheet_rows(row_numbers):
 
 def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str:
     """Build message identical to dashboard summary"""
+
     sunday_df = df[df["Date"] == target_date]
 
-    attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"].copy()
+    attendance_df = sunday_df[
+        sunday_df["Description"].str.lower() == "attendance"
+    ].copy()
 
-    # sort unpaid first, then alphabetically
+    court_df = sunday_df[
+        sunday_df["Description"].str.lower() == "court booking"
+    ].copy()
+
+    # SORT players: unpaid first, then alphabetical
     attendance_df = attendance_df.sort_values(
         by=["Paid", "Player Name"],
-        ascending=[True, True]
+        ascending=[True, True],
+        key=lambda col: col.str.lower() if col.name == "Player Name" else col
     )
 
     lines = []
+
     lines.append(f"📅 {target_date.strftime('%d %b %Y')}")
 
     lines.append("📋 Court bookings:")
+
     if court_df.empty:
         lines.append(" - None")
     else:
-        # sort players: unpaid first, then alphabetical
-        attendance_df = attendance_df.sort_values(
-            by=["Paid", "Player Name"],
-            ascending=[True, True]
-            )
 
-        lines.append(f"👥 Attendance: {len(attendance_df)}")
+        court_df = court_df.sort_values("Court")
 
-        for _, r in attendance_df.iterrows():
-
-            paid = "✅" if r["Paid"] else "❌"
-            name = r["Player Name"]
-
-            lines.append(f"{paid} {name}")
         for _, r in court_df.iterrows():
             court = int(r["Court"]) if pd.notna(r["Court"]) else ""
             lines.append(f" - Court {court} | {r['Time Slot']}")
 
-    attendance_df = attendance_df.sort_values("Paid")
-
     lines.append(f"👥 Attendance: {len(attendance_df)}")
 
     for _, r in attendance_df.iterrows():
+
         paid = "✅" if r["Paid"] else "❌"
         name = r["Player Name"]
-        lines.append(f"{paid} {name}")
 
-    total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
-    total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
-    balance = initial_balance + total_collection - total_expense
+        lines.append(f"{paid} {name}")
 
     lines.append("")
     lines.append("Court share @$4")
     lines.append("Cash or playnow/paylah to 97333133")
     lines.append("For booking or remove your name please go to https://tinyurl.com/SquashYCK")
+
+    return "\n".join(lines)
 #    lines.append("💰 Our Fund:")
 #    lines.append(f" Collection: SGD {total_collection:.2f}")
 #    lines.append(f" Expense: SGD {total_expense:.2f}")
@@ -648,9 +645,11 @@ else:
 # Display data for selected date
 sunday_df = df[df["Date"] == selected_date]
 
-attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"].copy()
+attendance_df = sunday_df[
+    sunday_df["Description"].str.lower() == "attendance"
+].copy()
 
-# SORT PLAYERS: unpaid first, then alphabetical
+# SORT players: unpaid first, then alphabetical
 attendance_df = attendance_df.sort_values(
     by=["Paid", "Player Name"],
     ascending=[True, True],
@@ -682,8 +681,6 @@ if players.empty:
     st.write("No players yet")
 
 else:
-
-    players = players.sort_values("Paid")
 
     for _, r in players.iterrows():
 
@@ -820,6 +817,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
