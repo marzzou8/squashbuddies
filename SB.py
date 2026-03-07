@@ -178,6 +178,20 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
     if court_df.empty:
         lines.append(" - None")
     else:
+        # sort players: unpaid first, then alphabetical
+        attendance_df = attendance_df.sort_values(
+            by=["Paid", "Player Name"],
+            ascending=[True, True]
+            )
+
+        lines.append(f"👥 Attendance: {len(attendance_df)}")
+
+        for _, r in attendance_df.iterrows():
+
+            paid = "✅" if r["Paid"] else "❌"
+            name = r["Player Name"]
+
+            lines.append(f"{paid} {name}")
         for _, r in court_df.iterrows():
             court = int(r["Court"]) if pd.notna(r["Court"]) else ""
             lines.append(f" - Court {court} | {r['Time Slot']}")
