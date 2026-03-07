@@ -627,9 +627,14 @@ court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
 
 # Court Bookings
 st.markdown("### 📋 Court Bookings")
+
 if court_df.empty:
     st.write("None")
 else:
+
+    # Sort by court number
+    court_df = court_df.sort_values(by="Court")
+
     for _, r in court_df.iterrows():
         court = int(r["Court"]) if pd.notna(r["Court"]) else ""
         st.write(f"Court {court} | {r['Time Slot']}")
@@ -789,6 +794,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
