@@ -290,12 +290,18 @@ def send_unpaid_reminder():
             (df["Date"] == last_sunday_with_attendance) &
             (df["Paid"] == False) &
             (df["Player Name"].str.strip() != "")
-        ]
+        ].copy()
+
+        # sort alphabetically by player name
+        unpaid = unpaid.sort_values(
+            by="Player Name",
+            key=lambda col: col.str.lower()
+        )
 
         if unpaid.empty:
             message = f"📅 {last_sunday_with_attendance.strftime('%d %b %Y')}\n✅ All players have paid! No reminders needed."
         else:
-            names = sorted(unpaid["Player Name"].tolist())
+            names = unpaid["Player Name"].tolist()
             message = f"📅 {last_sunday_with_attendance.strftime('%d %b %Y')}\n⚠️ Unpaid players (please settle $4):\n"
             for n in names:
                 message += f"• {n}\n"
@@ -805,6 +811,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
