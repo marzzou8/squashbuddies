@@ -168,8 +168,13 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
     """Build message identical to dashboard summary"""
     sunday_df = df[df["Date"] == target_date]
 
-    attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"]
-    court_df = sunday_df[sunday_df["Description"].str.lower() == "court booking"]
+    attendance_df = sunday_df[sunday_df["Description"].str.lower() == "attendance"].copy()
+
+    # sort unpaid first, then alphabetically
+    attendance_df = attendance_df.sort_values(
+        by=["Paid", "Player Name"],
+        ascending=[True, True]
+    )
 
     lines = []
     lines.append(f"📅 {target_date.strftime('%d %b %Y')}")
@@ -800,6 +805,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
