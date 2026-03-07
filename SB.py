@@ -659,68 +659,59 @@ else:
 
         icon = "✅" if paid else "❌"
 
-        # show player line
-        st.markdown(f"**{icon} {name}**")
+        c1, c2, c3 = st.columns([8,1,1], gap="small")
 
-        # action buttons
-        b1, b2 = st.columns(2)
+        # Player name
+        with c1:
+            st.write(f"{icon} {name}")
 
-        # ----------------
-        # MARK PAYMENT
-        # ----------------
-        if not paid:
+        # Mark paid
+        with c2:
+            if not paid:
+                if st.button("💰", key=f"pay_{rownum}"):
 
-            if b1.button("💰 Mark Paid", key=f"pay_{rownum}"):
-
-                update_row_cells(rownum, {
-                    "Paid": True,
-                    "Collection": DEFAULT_FEE,
-                    "Balance": DEFAULT_FEE
-                })
-
-                next_week_date = next_sunday_of(selected_date)
-
-                latest_df = load_records()
-
-                already_booked = not latest_df[
-                    (latest_df["Description"].str.lower() == "attendance") &
-                    (latest_df["Date"] == next_week_date) &
-                    (latest_df["Player Name"].str.lower() == name.lower())
-                ].empty
-
-                if not already_booked:
-
-                    append_record({
-                        "Date": next_week_date,
-                        "Player Name": name,
-                        "Paid": False,
-                        "Court": "",
-                        "Time Slot": DEFAULT_TIME_SLOT,
-                        "Collection": 0,
-                        "Expense": 0,
-                        "Description": "Attendance",
+                    update_row_cells(rownum, {
+                        "Paid": True,
+                        "Collection": DEFAULT_FEE,
+                        "Balance": DEFAULT_FEE
                     })
 
+                    next_week_date = next_sunday_of(selected_date)
+
+                    latest_df = load_records()
+
+                    already_booked = not latest_df[
+                        (latest_df["Description"].str.lower() == "attendance") &
+                        (latest_df["Date"] == next_week_date) &
+                        (latest_df["Player Name"].str.lower() == name.lower())
+                    ].empty
+
+                    if not already_booked:
+
+                        append_record({
+                            "Date": next_week_date,
+                            "Player Name": name,
+                            "Paid": False,
+                            "Court": "",
+                            "Time Slot": DEFAULT_TIME_SLOT,
+                            "Collection": 0,
+                            "Expense": 0,
+                            "Description": "Attendance",
+                        })
+
+                    bust_cache()
+                    send_dashboard_telegram(next_week_date)
+                    st.rerun()
+
+        # Remove booking
+        with c3:
+            if st.button("🚫", key=f"remove_{rownum}"):
+
+                delete_sheet_rows([rownum])
+
                 bust_cache()
-
-                send_dashboard_telegram(next_week_date)
-
+                send_dashboard_telegram(selected_date)
                 st.rerun()
-
-        # ----------------
-        # REMOVE BOOKING
-        # ----------------
-        if b2.button("🚫 Remove", key=f"remove_{rownum}"):
-
-            delete_sheet_rows([rownum])
-
-            bust_cache()
-
-            send_dashboard_telegram(selected_date)
-
-            st.rerun()
-
-        st.divider()
 
 # Fund Summary
 #st.markdown("### 💰 Our Funds")
@@ -792,6 +783,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
