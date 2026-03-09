@@ -228,6 +228,7 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
 
         lines.append("")
         lines.append("💰 Our Fund:")
+        lines.append("Initial Balance as Feb 2026: -6.00")
         lines.append(f"Collection: SGD {total_collection:.2f}")
         lines.append(f"Expense: SGD {total_expense:.2f}")
         lines.append(f"Balance: SGD {balance:.2f}")
@@ -840,6 +841,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
