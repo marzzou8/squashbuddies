@@ -800,14 +800,7 @@ with st.expander("🧪 Test Tools (For Admin Only)"):
             test_msg = f"🧪 Test message from Squash Buddies at {datetime.datetime.now().strftime('%H:%M:%S')}"
             send_telegram_message(test_msg)
             st.success("Test message sent! Check Telegram.")
-    if st.button("💰 Test Expense Telegram Message"):
-
-    test_date = get_next_sundays(1)[0]
-
-    send_dashboard_telegram(test_date, show_fund=True)
-
-    st.success("Expense-style Telegram message sent!")
-
+    
 # -----------------------------
 # TUESDAY REMINDER CHECK (Simple & Reliable-chatgpt)
 # -----------------------------
@@ -842,6 +835,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
