@@ -164,7 +164,7 @@ def delete_sheet_rows(row_numbers):
     for r in sorted([int(x) for x in row_numbers], reverse=True):
         worksheet.delete_rows(r)
 
-def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_fund=False) -> str:
+def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_fund=False):
     """Build message identical to dashboard summary"""
 
     sunday_df = df[df["Date"] == target_date]
@@ -173,16 +173,17 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
         sunday_df["Description"].str.lower() == "attendance"
     ].copy()
 
-    # remove duplicate registrations
-    attendance_df = attendance_df.drop_duplicates(
-        subset=["Date", "Player Name", "Description"],
-        keep="first"
-    )
     court_df = sunday_df[
         sunday_df["Description"].str.lower() == "court booking"
     ].copy()
 
-    # SORT players: unpaid first, then alphabetical
+    # remove duplicate player registrations
+    attendance_df = attendance_df.drop_duplicates(
+        subset=["Date", "Player Name", "Description"],
+        keep="first"
+    )
+
+    # sort unpaid first then alphabetical
     attendance_df = attendance_df.sort_values(
         by=["Paid", "Player Name"],
         ascending=[True, True],
@@ -190,7 +191,6 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
     )
 
     lines = []
-
     lines.append(f"📅 {target_date.strftime('%d %b %Y')}")
 
     lines.append("📋 Court bookings:")
@@ -198,7 +198,6 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
     if court_df.empty:
         lines.append(" - None")
     else:
-
         court_df = court_df.sort_values("Court")
 
         for _, r in court_df.iterrows():
@@ -219,11 +218,12 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
     lines.append("Cash or playnow/paylah to 97333133")
     lines.append("For booking or remove your name please go to https://tinyurl.com/SquashYCK")
 
-    # Show fund section only when needed
+    # show fund only when needed
     if show_fund:
 
-        total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
-        total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
+        total_collection = pd.to_numeric(df["Collection"], errors="coerce").fillna(0).sum()
+        total_expense = pd.to_numeric(df["Expense"], errors="coerce").fillna(0).sum()
+
         balance = initial_balance + total_collection - total_expense
 
         lines.append("")
@@ -231,15 +231,14 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_f
         lines.append(f"Collection: SGD {total_collection:.2f}")
         lines.append(f"Expense: SGD {total_expense:.2f}")
         lines.append(f"Balance: SGD {balance:.2f}")
-    
+
     return "\n".join(lines)
 
 def send_dashboard_telegram(target_date: datetime.date, show_fund=False):
-    """Send dashboard-style message to Telegram"""
     df = load_records()
     msg = build_dashboard_message(df, target_date, show_fund)
     send_telegram_message(msg)
-
+    
 def next_sunday_of(d: datetime.date) -> datetime.date:
     """Get next Sunday after given date"""
     return d + datetime.timedelta(days=7)
@@ -769,8 +768,9 @@ else:
 #st.markdown("### 💰 Our Funds")
 st.caption("Court share @$4 | PayNow/PayLah to Seah 97333133")
 
-total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
-total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
+total_collection = pd.to_numeric(df["Collection"], errors="coerce").fillna(0).sum()
+total_expense = pd.to_numeric(df["Expense"], errors="coerce").fillna(0).sum()
+
 balance = initial_balance + total_collection - total_expense
 
 #col1, col2, col3 = st.columns(3)
@@ -835,6 +835,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
