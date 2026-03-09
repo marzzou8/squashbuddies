@@ -537,7 +537,12 @@ elif st.session_state.page == "expense":
 
     else:
         exp_date = st.date_input("Expense date", value=datetime.date.today())
-        exp_amount = st.number_input("Amount (SGD)", min_value=0, step=1)
+        exp_amount = st.number_input(
+            "Amount (SGD)",
+            min_value=0.00,
+            step=0.01,
+            format="%.2f"
+        )
         exp_desc = st.text_input("Description").strip()
 
         if st.button("✅ Save Other Expense"):
@@ -835,6 +840,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
