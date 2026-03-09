@@ -164,7 +164,7 @@ def delete_sheet_rows(row_numbers):
     for r in sorted([int(x) for x in row_numbers], reverse=True):
         worksheet.delete_rows(r)
 
-def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str:
+def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date, show_fund=False) -> str:
     """Build message identical to dashboard summary"""
 
     sunday_df = df[df["Date"] == target_date]
@@ -173,6 +173,11 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
         sunday_df["Description"].str.lower() == "attendance"
     ].copy()
 
+    # remove duplicate registrations
+    attendance_df = attendance_df.drop_duplicates(
+        subset=["Date", "Player Name", "Description"],
+        keep="first"
+    )
     court_df = sunday_df[
         sunday_df["Description"].str.lower() == "court booking"
     ].copy()
@@ -214,18 +219,25 @@ def build_dashboard_message(df: pd.DataFrame, target_date: datetime.date) -> str
     lines.append("Cash or playnow/paylah to 97333133")
     lines.append("For booking or remove your name please go to https://tinyurl.com/SquashYCK")
 
-    return "\n".join(lines)
-#    lines.append("💰 Our Fund:")
-#    lines.append(f" Collection: SGD {total_collection:.2f}")
-#    lines.append(f" Expense: SGD {total_expense:.2f}")
-#    lines.append(f" Balance: SGD {balance:.2f}")
+    # Show fund section only when needed
+    if show_fund:
 
+        total_collection = float(df["Collection"].sum()) if not df.empty else 0.0
+        total_expense = float(df["Expense"].sum()) if not df.empty else 0.0
+        balance = initial_balance + total_collection - total_expense
+
+        lines.append("")
+        lines.append("💰 Our Fund:")
+        lines.append(f"Collection: SGD {total_collection:.2f}")
+        lines.append(f"Expense: SGD {total_expense:.2f}")
+        lines.append(f"Balance: SGD {balance:.2f}")
+    
     return "\n".join(lines)
 
-def send_dashboard_telegram(target_date: datetime.date):
+def send_dashboard_telegram(target_date: datetime.date, show_fund=False):
     """Send dashboard-style message to Telegram"""
     df = load_records()
-    msg = build_dashboard_message(df, target_date)
+    msg = build_dashboard_message(df, target_date, show_fund)
     send_telegram_message(msg)
 
 def next_sunday_of(d: datetime.date) -> datetime.date:
@@ -364,7 +376,7 @@ if st.session_state.page == "player":
         subset = df[
             (df["Description"].str.lower() == "attendance") &
             (df["Date"] == play_date) &
-            (df["Player Name"].str.lower() == player_name.lower())
+            (df["Player Name"].str.strip().str.lower() == player_name.strip().lower())
         ]
         exists = not subset.empty
 
@@ -521,7 +533,7 @@ elif st.session_state.page == "expense":
             })
             bust_cache()
             st.success("Expense saved ✅")
-            send_dashboard_telegram(booking_date)
+            send_dashboard_telegram(booking_date, show_fund=True)
             st.rerun()
 
     else:
@@ -545,7 +557,7 @@ elif st.session_state.page == "expense":
                 })
                 bust_cache()
                 st.success("Expense saved ✅")
-                send_dashboard_telegram(next_sundays[0])
+                send_dashboard_telegram(next_sundays[0], show_fund=True)
                 st.rerun()
 
 # -----------------------------
@@ -648,6 +660,12 @@ sunday_df = df[df["Date"] == selected_date]
 attendance_df = sunday_df[
     sunday_df["Description"].str.lower() == "attendance"
 ].copy()
+
+# remove duplicate registrations
+attendance_df = attendance_df.drop_duplicates(
+    subset=["Date", "Player Name", "Description"],
+    keep="first"
+)
 
 # SORT players: unpaid first, then alphabetical
 attendance_df = attendance_df.sort_values(
@@ -817,6 +835,7 @@ def check_tuesday_reminder():
 
 # Run automatically when app loads
 check_tuesday_reminder()
+
 
 
 
