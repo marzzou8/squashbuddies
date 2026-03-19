@@ -20,7 +20,7 @@ EXPECTED_COLUMNS = [
     "Date", "Player Name", "Paid", "Court", "Time Slot",
     "Collection", "Expense", "Balance", "Description"
 ]
-initial_balance = -6
+initial_balance = 39
 
 # -----------------------------
 # SECRETS
